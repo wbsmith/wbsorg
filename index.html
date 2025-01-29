@@ -24,6 +24,116 @@
             max-width: 100%;
             max-height: 100%;
             object-fit: contain;
+        }
+        #filmstrip {
+            height: 100px;
+            display: flex;
+            overflow-x: auto;
+            background-color: #333;
+            padding: 10px 0;
+        }
+        .thumbnail {
+            height: 80px;
+            margin: 0 5px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: border-color 0.3s ease;
+        }
+        .thumbnail.active {
+            border-color: rgb(75, 122, 255);
+        }
+    </style>
+</head>
+<body>
+    <div id="main-image-container">
+        <img id="main-image" src="" alt="Main Image">
+    </div>
+    <div id="filmstrip"></div>
+
+    <script src="https://unpkg.com/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script>
+    <script>
+        const mainImage = document.getElementById('main-image');
+        const filmstrip = document.getElementById('filmstrip');
+        const mainImageContainer = document.getElementById('main-image-container');
+
+        const images = [
+            'https://s3.us-west-1.amazonaws.com/wbryansmith.org/full_imgs/WBS_001459_20250107_172322.jpg',
+	    'https://s3.us-west-1.amazonaws.com/wbryansmith.org/full_imgs/WBS_001573_20250107_174056.jpg',
+            'https://s3.us-west-1.amazonaws.com/wbryansmith.org/full_imgs/WBS_001580_20250107_174426.jpg',
+            'https://s3.us-west-1.amazonaws.com/wbryansmith.org/full_imgs/WBS_001581_20250107_174608.jpg',
+            'https://s3.us-west-1.amazonaws.com/wbryansmith.org/full_imgs/WBS_001584_20250107_174906.jpg'
+            // Add more image URLs here
+        ];
+
+        let panzoomInstance;
+
+        function loadImages() {
+            images.forEach((src, index) => {
+                const thumbnail = document.createElement('img');
+                thumbnail.src = src;
+                thumbnail.alt = `Thumbnail ${index + 1}`;
+                thumbnail.className = 'thumbnail';
+                thumbnail.addEventListener('click', () => selectImage(index));
+                filmstrip.appendChild(thumbnail);
+            });
+            selectImage(0);
+        }
+
+        function selectImage(index) {
+            mainImage.src = images[index];
+            document.querySelectorAll('.thumbnail').forEach((thumb, i) => {
+                thumb.classList.toggle('active', i === index);
+            });
+
+            if (panzoomInstance) {
+                panzoomInstance.destroy();
+            }
+
+            panzoomInstance = Panzoom(mainImage, {
+                maxScale: 5,
+                minScale: 1,
+                contain: 'outside',
+                startScale: 1,
+                startX: 0,
+                startY: 0
+            });
+
+            mainImageContainer.addEventListener('wheel', panzoomInstance.zoomWithWheel);
+        }
+
+        loadImages();
+    </script>
+</body>
+</html>
+
+
+
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>W. Bryan Smith Photography</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #1a1a1a;
+            color: rgb(75, 122, 255);
+            font-family: Arial, sans-serif;
+        }
+        #main-image-container {
+            width: 100%;
+            height: calc(100vh - 120px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+        #main-image {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
             transition: transform 0.3s ease;
         }
         #filmstrip {
@@ -265,4 +375,5 @@
     </script>
 </body>
 </html>
+ -->
  -->
