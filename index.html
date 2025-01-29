@@ -5,44 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>W. Bryan Smith Photography</title>
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: #1a1a1a;
-            color: rgb(75, 122, 255);
-            font-family: Arial, sans-serif;
-        }
-        #main-image-container {
-            width: 100%;
-            height: calc(100vh - 120px);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            overflow: hidden;
-        }
-        #main-image {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-        }
-        #filmstrip {
-            height: 100px;
-            display: flex;
-            overflow-x: auto;
-            background-color: #333;
-            padding: 10px 0;
-        }
-        .thumbnail {
-            height: 80px;
-            margin: 0 5px;
-            cursor: pointer;
-            border: 2px solid transparent;
-            transition: border-color 0.3s ease;
-        }
-        .thumbnail.active {
-            border-color: rgb(75, 122, 255);
-        }
+        /* Your existing CSS styles here */
     </style>
+    <!-- Include the AWS SDK -->
+    <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1011.0.min.js"></script>
 </head>
 <body>
     <div id="main-image-container">
@@ -52,35 +18,59 @@
 
     <script src="https://unpkg.com/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script>
     <script>
+        // AWS Configuration
+        AWS.config.region = 'us-west-1'; // e.g., 'us-west-2'
+        AWS.config.credentials = new AWS.CognitoIdentityCredentials({
+            IdentityPoolId: 'us-west-1:9e08878d-ca32-436e-b383-1af42a66a80d',
+        });
+
+        const albumBucketName = 'wbryansmith.org';
+        const albumPrefix = 'full_imgs/';
+        const s3 = new AWS.S3({
+            apiVersion: '2006-03-01',
+            params: { Bucket: albumBucketName }
+        });
+
         const mainImage = document.getElementById('main-image');
         const filmstrip = document.getElementById('filmstrip');
         const mainImageContainer = document.getElementById('main-image-container');
 
-        const images = [
-            'https://s3.us-west-1.amazonaws.com/wbryansmith.org/full_imgs/WBS_001459_20250107_172322.jpg',
-	    'https://s3.us-west-1.amazonaws.com/wbryansmith.org/full_imgs/WBS_001573_20250107_174056.jpg',
-            'https://s3.us-west-1.amazonaws.com/wbryansmith.org/full_imgs/WBS_001580_20250107_174426.jpg',
-            'https://s3.us-west-1.amazonaws.com/wbryansmith.org/full_imgs/WBS_001581_20250107_174608.jpg',
-            'https://s3.us-west-1.amazonaws.com/wbryansmith.org/full_imgs/WBS_001584_20250107_174906.jpg'
-            // Add more image URLs here
-        ];
-
         let panzoomInstance;
+        let images = [];
 
-        function loadImages() {
-            images.forEach((src, index) => {
-                const thumbnail = document.createElement('img');
-                thumbnail.src = src;
-                thumbnail.alt = `Thumbnail ${index + 1}`;
-                thumbnail.className = 'thumbnail';
-                thumbnail.addEventListener('click', () => selectImage(index));
-                filmstrip.appendChild(thumbnail);
+        function listImages() {
+            return new Promise((resolve, reject) => {
+                s3.listObjects({ Prefix: albumPrefix }, function(err, data) {
+                    if (err) {
+                        reject("Error listing objects in bucket: " + err.message);
+                    } else {
+                        resolve(data.Contents.map(object => object.Key).filter(key => key !== albumPrefix));
+                    }
+                });
             });
-            selectImage(0);
+        }
+
+        async function loadImages() {
+            try {
+                images = await listImages();
+                images.forEach((src, index) => {
+                    const thumbnail = document.createElement('img');
+                    thumbnail.src = s3.getSignedUrl('getObject', {Bucket: albumBucketName, Key: src});
+                    thumbnail.alt = `Thumbnail ${index + 1}`;
+                    thumbnail.className = 'thumbnail';
+                    thumbnail.addEventListener('click', () => selectImage(index));
+                    filmstrip.appendChild(thumbnail);
+                });
+                if (images.length > 0) {
+                    selectImage(0);
+                }
+            } catch (error) {
+                console.error("Error loading images:", error);
+            }
         }
 
         function selectImage(index) {
-            mainImage.src = images[index];
+            mainImage.src = s3.getSignedUrl('getObject', {Bucket: albumBucketName, Key: images[index]});
             document.querySelectorAll('.thumbnail').forEach((thumb, i) => {
                 thumb.classList.toggle('active', i === index);
             });
@@ -101,279 +91,8 @@
             mainImageContainer.addEventListener('wheel', panzoomInstance.zoomWithWheel);
         }
 
+        // Initialize the image loading
         loadImages();
     </script>
 </body>
 </html>
-
-
-
-<!-- <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>W. Bryan Smith Photography</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: #1a1a1a;
-            color: rgb(75, 122, 255);
-            font-family: Arial, sans-serif;
-        }
-        #main-image-container {
-            width: 100%;
-            height: calc(100vh - 120px);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            overflow: hidden;
-        }
-        #main-image {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-            transition: transform 0.3s ease;
-        }
-        #filmstrip {
-            height: 100px;
-            display: flex;
-            overflow-x: auto;
-            background-color: #333;
-            padding: 10px 0;
-        }
-        .thumbnail {
-            height: 80px;
-            margin: 0 5px;
-            cursor: pointer;
-            border: 2px solid transparent;
-            transition: border-color 0.3s ease;
-        }
-        .thumbnail.active {
-            border-color: rgb(75, 122, 255);
-        }
-    </style>
-</head>
-<body>
-    <div id="main-image-container">
-        <img id="main-image" src="" alt="Main Image">
-    </div>
-    <div id="filmstrip"></div>
-
-    <script>
-        const mainImage = document.getElementById('main-image');
-        const filmstrip = document.getElementById('filmstrip');
-        const mainImageContainer = document.getElementById('main-image-container');
-
-        const images = [
-            'https://s3.us-west-1.amazonaws.com/wbryansmith.org/full_imgs/WBS_001459_20250107_172322.jpg',
-	    'https://s3.us-west-1.amazonaws.com/wbryansmith.org/full_imgs/WBS_001573_20250107_174056.jpg',
-            'https://s3.us-west-1.amazonaws.com/wbryansmith.org/full_imgs/WBS_001580_20250107_174426.jpg',
-            'https://s3.us-west-1.amazonaws.com/wbryansmith.org/full_imgs/WBS_001581_20250107_174608.jpg',
-            'https://s3.us-west-1.amazonaws.com/wbryansmith.org/full_imgs/WBS_001584_20250107_174906.jpg'
-            // Add more image URLs here
-        ];
-
-        let currentZoom = 1;
-
-        function loadImages() {
-            images.forEach((src, index) => {
-                const thumbnail = document.createElement('img');
-                thumbnail.src = src;
-                thumbnail.alt = `Thumbnail ${index + 1}`;
-                thumbnail.className = 'thumbnail';
-                thumbnail.addEventListener('click', () => selectImage(index));
-                filmstrip.appendChild(thumbnail);
-            });
-            selectImage(0);
-        }
-
-        function selectImage(index) {
-            mainImage.src = images[index];
-            currentZoom = 1;
-            mainImage.style.transform = `scale(${currentZoom})`;
-            document.querySelectorAll('.thumbnail').forEach((thumb, i) => {
-                thumb.classList.toggle('active', i === index);
-            });
-        }
-
-        mainImageContainer.addEventListener('wheel', (e) => {
-            e.preventDefault();
-            const zoomSpeed = 0.1;
-            currentZoom += e.deltaY > 0 ? -zoomSpeed : zoomSpeed;
-            currentZoom = Math.max(1, Math.min(currentZoom, 3));
-            mainImage.style.transform = `scale(${currentZoom})`;
-        });
-
-        let isDragging = false;
-        let startX, startY, translateX = 0, translateY = 0;
-
-        mainImageContainer.addEventListener('mousedown', (e) => {
-            isDragging = true;
-            startX = e.clientX - translateX;
-            startY = e.clientY - translateY;
-        });
-
-        mainImageContainer.addEventListener('mousemove', (e) => {
-            if (isDragging && currentZoom > 1) {
-                translateX = e.clientX - startX;
-                translateY = e.clientY - startY;
-                mainImage.style.transform = `scale(${currentZoom}) translate(${translateX}px, ${translateY}px)`;
-            }
-        });
-
-        mainImageContainer.addEventListener('mouseup', () => {
-            isDragging = false;
-        });
-
-        mainImageContainer.addEventListener('mouseleave', () => {
-            isDragging = false;
-        });
-
-        loadImages();
-    </script>
-</body>
-</html>
-
-
-
-
-<!-- <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bryan's Pics</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: #1a1a1a;
-            color: rgb(75, 122, 255);
-            font-family: Arial, sans-serif;
-        }
-        #carousel {
-            display: flex;
-            overflow-x: auto;
-            scroll-snap-type: x mandatory;
-            scroll-behavior: smooth;
-            -webkit-overflow-scrolling: touch;
-        }
-        .slide {
-            flex: 0 0 100%;
-            scroll-snap-align: start;
-            position: relative;
-        }
-        img {
-            width: 100%;
-            height: 100vh;
-            object-fit: contain;
-        }
-        #zoom-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.9);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-        #zoomed-image {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-        }
-        .controls {
-            position: fixed;	
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 10px;
-        }
-        button {
-            background-color: #333;
-            color: rgb(75, 122, 255);
-            border: none;
-            padding: 10px 20px;
-            cursor: pointer;
-        }
-    </style>
-</head>
-<body>
-    <div id="carousel"></div>
-    <div id="zoom-container">
-        <img id="zoomed-image" src="" alt="Zoomed image">
-    </div>
-    <div class="controls">
-        <button id="prev">Previous</button>
-        <button id="next">Next</button>
-        <button id="zoom">Zoom</button>
-    </div>
-
-    <script>
-        const carousel = document.getElementById('carousel');
-        const zoomContainer = document.getElementById('zoom-container');
-        const zoomedImage = document.getElementById('zoomed-image');
-        const prevBtn = document.getElementById('prev');
-        const nextBtn = document.getElementById('next');
-        const zoomBtn = document.getElementById('zoom');
-
-        const images = [
-		'https://s3.us-west-1.amazonaws.com/wbryansmith.org/full_imgs/WBS_001459_20250107_172322.jpg',
-		'https://s3.us-west-1.amazonaws.com/wbryansmith.org/full_imgs/WBS_001573_20250107_174056.jpg',
-		'https://s3.us-west-1.amazonaws.com/wbryansmith.org/full_imgs/WBS_001580_20250107_174426.jpg',
-		'https://s3.us-west-1.amazonaws.com/wbryansmith.org/full_imgs/WBS_001581_20250107_174608.jpg',
-		'https://s3.us-west-1.amazonaws.com/wbryansmith.org/full_imgs/WBS_001584_20250107_174906.jpg'
-            // Add more image URLs here
-        ];
-
-        let currentIndex = 0;
-
-        function loadImages() {
-            for (let i = 0; i < images.length; i++) {
-                const slide = document.createElement('div');
-                slide.className = 'slide';
-                const img = document.createElement('img');
-                img.src = images[i];
-                img.alt = `Image ${i + 1}`;
-                slide.appendChild(img);
-                carousel.appendChild(slide);
-            }
-        }
-
-        function scrollToImage(index) {
-            const slides = document.querySelectorAll('.slide');
-            slides[index].scrollIntoView({ behavior: 'smooth' });
-        }
-
-        prevBtn.addEventListener('click', () => {
-            currentIndex = (currentIndex - 1 + images.length) % images.length;
-            scrollToImage(currentIndex);
-        });
-
-        nextBtn.addEventListener('click', () => {
-            currentIndex = (currentIndex + 1) % images.length;
-            scrollToImage(currentIndex);
-        });
-
-        zoomBtn.addEventListener('click', () => {
-            const currentImage = document.querySelectorAll('.slide img')[currentIndex];
-            zoomedImage.src = currentImage.src;
-            zoomContainer.style.display = 'flex';
-        });
-
-        zoomContainer.addEventListener('click', () => {
-            zoomContainer.style.display = 'none';
-        });
-
-        loadImages();
-    </script>
-</body>
-</html>
- -->
- -->
