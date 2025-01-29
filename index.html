@@ -43,7 +43,7 @@
             border-color: rgb(75, 122, 255);
         }
     </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/aws-amplify/2.2.6/aws-amplify.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/aws-amplify/5.0.4/aws-amplify.min.js"></script>
 </head>
 <body>
     <div id="main-image-container">
@@ -51,21 +51,22 @@
     </div>
     <div id="filmstrip"></div>
 
+    const { Amplify } = aws_amplify;
+    
     <script src="https://unpkg.com/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script>
     <script>
         // Amplify configuration
         Amplify.configure({
             Auth: {
-                identityPoolId: 'us-west-1:9e08878d-ca32-436e-b383-1af42a66a80d', // Amazon Cognito Identity Pool ID
-                region: 'us-west-1', // Amazon Cognito Region
+                identityPoolId: 'us-west-1:9e08878d-ca32-436e-b383-1af42a66a80d',
+                region: 'us-west-1',
             },
             Storage: {
-                AWSS3: {
-                    bucket: 'wbryansmith.org', // Your bucket name
-                    region: 'us-west-1', // Specify the region your bucket was created in
-                }
+                bucket: 'wbryansmith.org',
+                region: 'us-west-1'
             }
         });
+
 
         const mainImage = document.getElementById('main-image');
         const filmstrip = document.getElementById('filmstrip');
