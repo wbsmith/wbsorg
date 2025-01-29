@@ -2,6 +2,7 @@ const path = require('path');
 const CopyPlugin = require('copy-webpack-plugin');
 
 module.exports = {
+  mode: 'production',
   entry: './src/index.js',
   output: {
     path: path.resolve(__dirname, 'dist'),
@@ -32,11 +33,5 @@ module.exports = {
         { from: "public", to: "" }
       ],
     }),
-  ],
-  devServer: {
-    historyApiFallback: true,
-    proxy: {
-      '/api': 'http://localhost:3000'
-    }
-  }
+  ]
 };
