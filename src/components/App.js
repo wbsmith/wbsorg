@@ -1,7 +1,6 @@
 import React from 'react';
-import { CloverIIIF } from '@samvera/clover-iiif';
-import Filmstrip from './components/Filmstrip';
-
+import CloverIIIF from '@samvera/clover-iiif'
+import Filmstrip from './Filmstrip';
 const App = () => {
   const [images, setImages] = React.useState([]);
   const [selectedImage, setSelectedImage] = React.useState(null);
