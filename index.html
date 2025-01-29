@@ -3,6 +3,135 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>W. Bryan Smith Photography</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #1a1a1a;
+            color: rgb(75, 122, 255);
+            font-family: Arial, sans-serif;
+        }
+        #main-image-container {
+            width: 100%;
+            height: calc(100vh - 120px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+        #main-image {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            transition: transform 0.3s ease;
+        }
+        #filmstrip {
+            height: 100px;
+            display: flex;
+            overflow-x: auto;
+            background-color: #333;
+            padding: 10px 0;
+        }
+        .thumbnail {
+            height: 80px;
+            margin: 0 5px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: border-color 0.3s ease;
+        }
+        .thumbnail.active {
+            border-color: rgb(75, 122, 255);
+        }
+    </style>
+</head>
+<body>
+    <div id="main-image-container">
+        <img id="main-image" src="" alt="Main Image">
+    </div>
+    <div id="filmstrip"></div>
+
+    <script>
+        const mainImage = document.getElementById('main-image');
+        const filmstrip = document.getElementById('filmstrip');
+        const mainImageContainer = document.getElementById('main-image-container');
+
+        const images = [
+            'https://example.com/image1.jpg',
+            'https://example.com/image2.jpg',
+            'https://example.com/image3.jpg',
+            // Add more image URLs here
+        ];
+
+        let currentZoom = 1;
+
+        function loadImages() {
+            images.forEach((src, index) => {
+                const thumbnail = document.createElement('img');
+                thumbnail.src = src;
+                thumbnail.alt = `Thumbnail ${index + 1}`;
+                thumbnail.className = 'thumbnail';
+                thumbnail.addEventListener('click', () => selectImage(index));
+                filmstrip.appendChild(thumbnail);
+            });
+            selectImage(0);
+        }
+
+        function selectImage(index) {
+            mainImage.src = images[index];
+            currentZoom = 1;
+            mainImage.style.transform = `scale(${currentZoom})`;
+            document.querySelectorAll('.thumbnail').forEach((thumb, i) => {
+                thumb.classList.toggle('active', i === index);
+            });
+        }
+
+        mainImageContainer.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const zoomSpeed = 0.1;
+            currentZoom += e.deltaY > 0 ? -zoomSpeed : zoomSpeed;
+            currentZoom = Math.max(1, Math.min(currentZoom, 3));
+            mainImage.style.transform = `scale(${currentZoom})`;
+        });
+
+        let isDragging = false;
+        let startX, startY, translateX = 0, translateY = 0;
+
+        mainImageContainer.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            startX = e.clientX - translateX;
+            startY = e.clientY - translateY;
+        });
+
+        mainImageContainer.addEventListener('mousemove', (e) => {
+            if (isDragging && currentZoom > 1) {
+                translateX = e.clientX - startX;
+                translateY = e.clientY - startY;
+                mainImage.style.transform = `scale(${currentZoom}) translate(${translateX}px, ${translateY}px)`;
+            }
+        });
+
+        mainImageContainer.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        mainImageContainer.addEventListener('mouseleave', () => {
+            isDragging = false;
+        });
+
+        loadImages();
+    </script>
+</body>
+</html>
+
+
+
+
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bryan's Pics</title>
     <style>
         body {
@@ -134,3 +263,4 @@
     </script>
 </body>
 </html>
+ -->
