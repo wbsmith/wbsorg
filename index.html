@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -43,6 +44,112 @@
             border-color: rgb(75, 122, 255);
         }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/aws-amplify/5.0.4/aws-amplify.min.js"></script>
+    <script src="https://unpkg.com/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script>
+</head>
+<body>
+    <div id="main-image-container">
+        <img id="main-image" src="" alt="Main Image">
+    </div>
+    <div id="filmstrip"></div>
+
+    <script>
+        const { Amplify } = aws_amplify;
+
+        // Amplify configuration
+        Amplify.configure({
+            Auth: {
+                identityPoolId: 'us-west-1:9e08878d-ca32-436e-b383-1af42a66a80d',
+                region: 'us-west-1',
+            },
+            Storage: {
+                bucket: 'wbryansmith.org',
+                region: 'us-west-1'
+            }
+        });
+
+        // Your existing JavaScript code here
+        const mainImage = document.getElementById('main-image');
+        const filmstrip = document.getElementById('filmstrip');
+        const mainImageContainer = document.getElementById('main-image-container');
+
+        let panzoomInstance;
+        let images = [];
+
+        async function listImages() {
+            try {
+                const result = await Amplify.Storage.list('full_imgs/', { level: 'public' });
+                console.log('List result:', result);
+                return result.map(item => item.key).filter(key => key !== 'full_imgs/');
+            } catch (error) {
+                console.error("Error listing images:", error);
+                return [];
+            }
+        }
+
+        async function loadImages() {
+            try {
+                images = await listImages();
+                for (let [index, src] of images.entries()) {
+                    const thumbnail = document.createElement('img');
+                    const result = await Amplify.Storage.get(src, { level: 'public' });
+                    thumbnail.src = result;
+                    thumbnail.alt = `Thumbnail ${index + 1}`;
+                    thumbnail.className = 'thumbnail';
+                    thumbnail.addEventListener('click', () => selectImage(index));
+                    filmstrip.appendChild(thumbnail);
+                }
+                if (images.length > 0) {
+                    selectImage(0);
+                }
+            } catch (error) {
+                console.error("Error loading images:", error);
+            }
+        }
+
+        async function selectImage(index) {
+            try {
+                const result = await Amplify.Storage.get(images[index], { level: 'public' });
+                mainImage.src = result;
+                document.querySelectorAll('.thumbnail').forEach((thumb, i) => {
+                    thumb.classList.toggle('active', i === index);
+                });
+
+                if (panzoomInstance) {
+                    panzoomInstance.destroy();
+                }
+
+                panzoomInstance = Panzoom(mainImage, {
+                    maxScale: 5,
+                    minScale: 1,
+                    contain: 'outside',
+                    startScale: 1,
+                    startX: 0,
+                    startY: 0
+                });
+
+                mainImageContainer.addEventListener('wheel', panzoomInstance.zoomWithWheel);
+            } catch (error) {
+                console.error("Error selecting image:", error);
+            }
+        }
+
+        // Initialize the image loading
+        loadImages();
+    </script>
+</body>
+</html>
+
+
+
+
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>W. Bryan Smith Photography</title>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/aws-amplify/5.0.4/aws-amplify.min.js"></script>
 </head>
 <body>
@@ -137,7 +244,7 @@
     </script>
 </body>
 </html>
-
+ -->
 <!-- <!DOCTYPE html>
 <html lang="en">
 <head>
