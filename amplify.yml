@@ -3,7 +3,7 @@ frontend:
   phases:
     preBuild:
       commands:
-        - npm install
+        - npm ci  # Using ci instead of install for more reliable builds
     build:
       commands:
         - npm run build
@@ -14,3 +14,4 @@ frontend:
   cache:
     paths:
       - node_modules/**/*
+      - ~/.npm
