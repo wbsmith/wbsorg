@@ -77,32 +77,49 @@ const App = () => {
       }
 
       const manifest = {
-        "@context": "http://iiif.io/api/presentation/3/context.json",
-        "id": "https://www.wbryansmith.org/manifest",
+        "@context": ["http://iiif.io/api/presentation/3/context.json"],
+        "id": `https://www.wbryansmith.org/manifest/${imageId}`,
         "type": "Manifest",
+        "label": { "en": [selectedImage.title] },
+        "rights": "http://creativecommons.org/licenses/by/4.0/",
+        "rendering": [
+          {
+            "id": selectedImage.fullPath,
+            "type": "Image",
+            "label": { "en": ["Download as JPG"] },
+            "format": "image/jpeg"
+          }
+        ],
         "items": [
           {
-            "id": "https://www.wbryansmith.org/canvas",
+            "id": `https://www.wbryansmith.org/canvas/${imageId}`,
             "type": "Canvas",
             "width": 4000,
             "height": 3000,
             "items": [
               {
-                "id": "https://www.wbryansmith.org/annotation-page",
+                "id": `https://www.wbryansmith.org/page/${imageId}`,
                 "type": "AnnotationPage",
                 "items": [
                   {
-                    "id": "https://www.wbryansmith.org/annotation",
+                    "id": `https://www.wbryansmith.org/annotation/${imageId}`,
                     "type": "Annotation",
                     "motivation": "painting",
+                    "target": `https://www.wbryansmith.org/canvas/${imageId}`,
                     "body": {
                       "id": selectedImage.fullPath,
                       "type": "Image",
                       "format": "image/jpeg",
                       "width": 4000,
-                      "height": 3000
-                    },
-                    "target": "https://www.wbryansmith.org/canvas"
+                      "height": 3000,
+                      "service": [
+                        {
+                          "id": selectedImage.fullPath.split('.')[0],
+                          "profile": "level0",
+                          "type": "ImageService3"
+                        }
+                      ]
+                    }
                   }
                 ]
               }
@@ -111,6 +128,7 @@ const App = () => {
         ]
       };
       
+      console.log('About to set manifest:', manifest);
       setCurrentManifest(manifest);
     } catch (error) {
       console.error('Error setting manifest:', error);
@@ -141,7 +159,7 @@ const App = () => {
                 options={{
                   canvasHeight: '60vh',
                   showIIIFBadge: false,
-                  showTitle: false,
+                  showTitle: false
                 }}
                 onError={handleCloverError}
               />
