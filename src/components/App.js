@@ -16,7 +16,11 @@ const App = () => {
 
   const fetchImages = async () => {
     try {
-      const s3Objects = await Storage.list('full_imgs/', { pageSize: 1000 });
+      // Now we can list from root since the prefix is set in config
+      const s3Objects = await Storage.list('', { 
+        pageSize: 1000,
+        level: 'public'  // Specify the access level
+      });
       
       const imageFiles = s3Objects
         .filter(item => {
@@ -25,15 +29,16 @@ const App = () => {
           return isImage && isNotDirectory;
         })
         .map(async (item) => {
-          const url = await Storage.get(item.key);
+          const url = await Storage.get(item.key, { level: 'public' });
           return {
             id: item.key.split('/').pop(),
             fullPath: url,
-            thumbnail: url, // Using full image as thumbnail for now
+            thumbnail: url,
             title: item.key.split('/').pop(),
             lastModified: item.lastModified
           };
         });
+  
 
       const resolvedImages = await Promise.all(imageFiles);
       const sortedImages = resolvedImages.sort((a, b) => 
