@@ -1,10 +1,12 @@
 // src/components/App.js
 import React from 'react';
+import CloverIIIF from '@samvera/clover-iiif';
 import Filmstrip from './Filmstrip';
 
 const App = () => {
   const [images, setImages] = React.useState([]);
   const [selectedImage, setSelectedImage] = React.useState(null);
+  const [currentManifest, setCurrentManifest] = React.useState(null);
 
   React.useEffect(() => {
     const fetchImages = async () => {
@@ -35,7 +37,7 @@ const App = () => {
 
         setImages(imageList);
         if (imageList.length > 0) {
-          setSelectedImage(imageList[0]);
+          handleImageSelect(imageList[0]);
         }
       } catch (error) {
         console.error('Error fetching images:', error);
@@ -45,6 +47,48 @@ const App = () => {
     fetchImages();
   }, []);
 
+  const handleImageSelect = (image) => {
+    setSelectedImage(image);
+    
+    const manifest = {
+      "@context": ["http://iiif.io/api/presentation/3/context.json"],
+      "id": `https://www.wbryansmith.org/manifest/${image.id}`,
+      "type": "Manifest",
+      "label": { "en": [image.title] },
+      "items": [
+        {
+          "id": `https://www.wbryansmith.org/canvas/${image.id}`,
+          "type": "Canvas",
+          "width": 4000,
+          "height": 3000,
+          "items": [
+            {
+              "id": `https://www.wbryansmith.org/page/${image.id}`,
+              "type": "AnnotationPage",
+              "items": [
+                {
+                  "id": `https://www.wbryansmith.org/annotation/${image.id}`,
+                  "type": "Annotation",
+                  "motivation": "painting",
+                  "target": `https://www.wbryansmith.org/canvas/${image.id}`,
+                  "body": {
+                    "id": image.url,
+                    "type": "Image",
+                    "format": "image/jpeg",
+                    "width": 4000,
+                    "height": 3000
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    };
+    
+    setCurrentManifest(manifest);
+  };
+
   return (
     <div className="app-container">
       <header>
@@ -53,15 +97,14 @@ const App = () => {
       
       <main>
         <div className="viewer-section">
-          {selectedImage ? (
+          {currentManifest ? (
             <div className="viewer-container">
-              <img 
-                src={selectedImage.url} 
-                alt={selectedImage.title}
-                style={{ 
-                  maxWidth: '100%',
-                  maxHeight: '100%',
-                  objectFit: 'contain'
+              <CloverIIIF
+                manifest={currentManifest}
+                options={{
+                  canvasHeight: '60vh',
+                  showIIIFBadge: false,
+                  showTitle: false
                 }}
               />
             </div>
@@ -75,7 +118,7 @@ const App = () => {
         <Filmstrip
           images={images}
           selectedImage={selectedImage}
-          onImageSelect={setSelectedImage}
+          onImageSelect={handleImageSelect}
         />
       </main>
     </div>
