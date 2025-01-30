@@ -11,8 +11,7 @@ const App = () => {
   const [currentManifest, setCurrentManifest] = React.useState(null);
   const [loading, setLoading] = React.useState(false);
 
-  React.useEffect(() => {
-    // Using hardcoded images since we know they work
+  const initializeGallery = () => {
     const imageFiles = [
       'WBS_001459_20250107_172322.jpg',
       'WBS_001573_20250107_174056.jpg',
@@ -28,9 +27,53 @@ const App = () => {
     }));
     
     setImages(imageFiles);
+    // Instead of calling handleImageSelect, create the manifest directly
     if (imageFiles.length > 0) {
-      handleImageSelect(imageFiles[0].id);
+      const firstImage = imageFiles[0];
+      setSelectedImage(firstImage.id);
+      
+      const initialManifest = {
+        "@context": ["http://iiif.io/api/presentation/3/context.json"],
+        "id": `https://www.wbryansmith.org/manifest/${firstImage.id}`,
+        "type": "Manifest",
+        "label": { "en": [firstImage.title] },
+        "items": [
+          {
+            "id": `https://www.wbryansmith.org/canvas/${firstImage.id}`,
+            "type": "Canvas",
+            "width": 4000,
+            "height": 3000,
+            "items": [
+              {
+                "id": `https://www.wbryansmith.org/page/${firstImage.id}`,
+                "type": "AnnotationPage",
+                "items": [
+                  {
+                    "id": `https://www.wbryansmith.org/annotation/${firstImage.id}`,
+                    "type": "Annotation",
+                    "motivation": "painting",
+                    "target": `https://www.wbryansmith.org/canvas/${firstImage.id}`,
+                    "body": {
+                      "id": firstImage.fullPath,
+                      "type": "Image",
+                      "format": "image/jpeg",
+                      "width": 4000,
+                      "height": 3000
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      };
+      
+      setCurrentManifest(initialManifest);
     }
+  };
+
+  React.useEffect(() => {
+    initializeGallery();
   }, []);
 
   const handleImageSelect = async (imageId) => {
@@ -79,7 +122,6 @@ const App = () => {
         ]
       };
       
-      console.log('About to set manifest:', manifest);
       setCurrentManifest(manifest);
     } catch (error) {
       console.error('Error setting manifest:', error);
@@ -104,7 +146,6 @@ const App = () => {
             <div className="loading">Loading...</div>
           ) : currentManifest ? (
             <div className="viewer-container">
-              {console.log('Current Manifest:', currentManifest)}
               <CloverIIIF
                 manifest={currentManifest}
                 options={{
