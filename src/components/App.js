@@ -75,34 +75,34 @@ const App = () => {
       if (!selectedImage) {
         throw new Error('Image not found');
       }
-  
+
       const manifest = {
         "@context": "http://iiif.io/api/presentation/3/context.json",
-        "id": selectedImage.fullPath,
+        "id": "https://www.wbryansmith.org/manifest",
         "type": "Manifest",
-        "label": { "en": [selectedImage.title] },
         "items": [
           {
-            "id": selectedImage.fullPath + "/canvas",
+            "id": "https://www.wbryansmith.org/canvas",
             "type": "Canvas",
-            "height": 3000,
             "width": 4000,
+            "height": 3000,
             "items": [
               {
-                "id": selectedImage.fullPath + "/annotation",
+                "id": "https://www.wbryansmith.org/annotation-page",
                 "type": "AnnotationPage",
                 "items": [
                   {
-                    "id": selectedImage.fullPath + "/annotation/1",
+                    "id": "https://www.wbryansmith.org/annotation",
                     "type": "Annotation",
                     "motivation": "painting",
                     "body": {
                       "id": selectedImage.fullPath,
                       "type": "Image",
                       "format": "image/jpeg",
-                      // Remove the service section since we're using direct URLs
+                      "width": 4000,
+                      "height": 3000
                     },
-                    "target": selectedImage.fullPath + "/canvas"
+                    "target": "https://www.wbryansmith.org/canvas"
                   }
                 ]
               }
@@ -119,6 +119,10 @@ const App = () => {
     }
   };
 
+  const handleCloverError = (error) => {
+    console.error('CloverIIIF Error:', error);
+  };
+
   return (
     <div className="app-container">
       <header>
@@ -131,6 +135,7 @@ const App = () => {
             <div className="loading">Loading...</div>
           ) : currentManifest ? (
             <div className="viewer-container">
+              {console.log('Current Manifest:', currentManifest)}
               <CloverIIIF
                 manifest={currentManifest}
                 options={{
@@ -138,6 +143,7 @@ const App = () => {
                   showIIIFBadge: false,
                   showTitle: false,
                 }}
+                onError={handleCloverError}
               />
             </div>
           ) : (
