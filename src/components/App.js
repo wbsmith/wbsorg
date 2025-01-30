@@ -50,35 +50,23 @@ const App = () => {
   const handleImageSelect = (image) => {
     setSelectedImage(image);
     
-    // Updated manifest structure
     const manifest = {
       "@context": "http://iiif.io/api/presentation/3/context.json",
-      "id": image.url,
+      "id": `${image.url}/manifest`,
       "type": "Manifest",
-      "label": { "en": [image.title] },
-      "rendering": [{
-        "id": image.url,
-        "type": "Image",
-        "label": { "en": ["Original Image"] },
-        "format": "image/jpeg"
-      }],
-      "start": {
-        "id": image.url,
-        "type": "Canvas"
-      },
       "items": [
         {
-          "id": image.url + "/canvas",
+          "id": `${image.url}/canvas`,
           "type": "Canvas",
           "height": 3000,
           "width": 4000,
           "items": [
             {
-              "id": image.url + "/page",
+              "id": `${image.url}/annotations`,
               "type": "AnnotationPage",
               "items": [
                 {
-                  "id": image.url + "/annotation",
+                  "id": `${image.url}/annotation`,
                   "type": "Annotation",
                   "motivation": "painting",
                   "body": {
@@ -86,9 +74,16 @@ const App = () => {
                     "type": "Image",
                     "format": "image/jpeg",
                     "height": 3000,
-                    "width": 4000
+                    "width": 4000,
+                    "service": [
+                      {
+                        "@id": image.url,
+                        "@type": "ImageService3",
+                        "profile": "level0"
+                      }
+                    ]
                   },
-                  "target": image.url + "/canvas"
+                  "target": `${image.url}/canvas`
                 }
               ]
             }
