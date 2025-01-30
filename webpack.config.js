@@ -1,5 +1,6 @@
 const path = require('path');
 const CopyPlugin = require('copy-webpack-plugin');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 module.exports = {
   mode: 'production',
@@ -28,10 +29,9 @@ module.exports = {
     extensions: ['.js', '.jsx']
   },
   plugins: [
-    new CopyPlugin({
-      patterns: [
-        { from: "public", to: "" }
-      ],
-    }),
+    new HtmlWebpackPlugin({
+      template: './src/index.html',
+      filename: 'index.html'
+    })
   ]
 };
