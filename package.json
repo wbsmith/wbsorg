@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "@aws-amplify/storage": "^5.0.0",
+    "@panzoom/panzoom": "^4.6.0",
     "@samvera/clover-iiif": "^1.13.1",
     "aws-amplify": "^5.0.0",
     "react": "^18.2.0",
