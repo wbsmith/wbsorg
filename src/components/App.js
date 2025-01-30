@@ -52,38 +52,36 @@ const App = () => {
     
     const manifest = {
       "@context": "http://iiif.io/api/presentation/3/context.json",
-      "id": `${image.url}/manifest`,
+      "id": "https://example.org/manifest.json",
       "type": "Manifest",
+      "label": {
+        "en": [
+          image.title
+        ]
+      },
       "items": [
         {
-          "id": `${image.url}/canvas`,
+          "id": "https://example.org/canvas/p1",
           "type": "Canvas",
           "height": 3000,
           "width": 4000,
           "items": [
             {
-              "id": `${image.url}/annotations`,
+              "id": "https://example.org/page/p1/1",
               "type": "AnnotationPage",
               "items": [
                 {
-                  "id": `${image.url}/annotation`,
+                  "id": "https://example.org/annotation/p0001-image",
                   "type": "Annotation",
                   "motivation": "painting",
                   "body": {
-                    "id": image.url,
+                    "id": image.url,    // This is our actual S3 image URL
                     "type": "Image",
                     "format": "image/jpeg",
                     "height": 3000,
-                    "width": 4000,
-                    "service": [
-                      {
-                        "@id": image.url,
-                        "@type": "ImageService3",
-                        "profile": "level0"
-                      }
-                    ]
+                    "width": 4000
                   },
-                  "target": `${image.url}/canvas`
+                  "target": "https://example.org/canvas/p1"
                 }
               ]
             }
