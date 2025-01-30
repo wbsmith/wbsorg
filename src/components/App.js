@@ -62,11 +62,11 @@ const App = () => {
         contain: 'outside'
       });
 
-      // Add wheel event listener for zoom
-      imageRef.current.parentElement.addEventListener('wheel', (e) => {
-        e.preventDefault();
-        panzoomRef.current.zoomWithWheel(e);
-      });
+      // // Add wheel event listener for zoom
+      // imageRef.current.parentElement.addEventListener('wheel', (e) => {
+      //   e.preventDefault();
+      //   panzoomRef.current.zoomWithWheel(e);
+      // });
     }
 
     // Cleanup
