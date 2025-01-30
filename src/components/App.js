@@ -75,40 +75,34 @@ const App = () => {
       if (!selectedImage) {
         throw new Error('Image not found');
       }
-
+  
       const manifest = {
         "@context": "http://iiif.io/api/presentation/3/context.json",
-        "id": `https://www.wbryansmith.org/manifest/${imageId}`,
+        "id": selectedImage.fullPath,
         "type": "Manifest",
         "label": { "en": [selectedImage.title] },
         "items": [
           {
-            "id": `https://www.wbryansmith.org/canvas/${imageId}`,
+            "id": selectedImage.fullPath + "/canvas",
             "type": "Canvas",
             "height": 3000,
             "width": 4000,
             "items": [
               {
-                "id": `https://www.wbryansmith.org/annotation-page/${imageId}`,
+                "id": selectedImage.fullPath + "/annotation",
                 "type": "AnnotationPage",
                 "items": [
                   {
-                    "id": `https://www.wbryansmith.org/annotation/${imageId}`,
+                    "id": selectedImage.fullPath + "/annotation/1",
                     "type": "Annotation",
                     "motivation": "painting",
                     "body": {
                       "id": selectedImage.fullPath,
                       "type": "Image",
                       "format": "image/jpeg",
-                      "service": [
-                        {
-                          "@id": selectedImage.fullPath,
-                          "type": "ImageService3",
-                          "profile": "level2"
-                        }
-                      ]
+                      // Remove the service section since we're using direct URLs
                     },
-                    "target": `https://www.wbryansmith.org/canvas/${imageId}`
+                    "target": selectedImage.fullPath + "/canvas"
                   }
                 ]
               }
