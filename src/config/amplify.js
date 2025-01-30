@@ -3,8 +3,9 @@ import { Amplify } from 'aws-amplify';
 
 Amplify.configure({
   Auth: {
-    identityPoolId: 'us-west-1:9e08878d-ca32-436e-b383-1af42a66a80d',
+    identityPoolId: 'us-west-1:your-identity-pool-id',
     region: 'us-west-1',
+    mandatorySignIn: false
   },
   Storage: {
     AWSS3: {
@@ -14,5 +15,14 @@ Amplify.configure({
         public: ''
       }
     }
+  },
+  API: {
+    endpoints: [
+      {
+        name: 'S3',
+        endpoint: `https://s3.us-west-1.amazonaws.com`,
+        region: 'us-west-1'
+      }
+    ]
   }
 });
