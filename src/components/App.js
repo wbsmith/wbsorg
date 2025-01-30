@@ -16,7 +16,7 @@ const App = () => {
 
   const fetchImages = async () => {
     try {
-      const s3Objects = await Storage.list('full_imgs/');
+      const s3Objects = await Storage.list('full_imgs/', { pageSize: 1000 });
       
       const imageFiles = s3Objects
         .filter(item => {
