@@ -4,6 +4,8 @@ import CloverIIIF from '@samvera/clover-iiif';
 import { Storage } from 'aws-amplify';
 import Filmstrip from './Filmstrip';
 
+const BUCKET_URL = 'https://s3.us-west-1.amazonaws.com/wbryansmith.org';
+
 const App = () => {
   const [images, setImages] = React.useState([]);
   const [selectedImage, setSelectedImage] = React.useState(null);
@@ -16,10 +18,9 @@ const App = () => {
 
   const fetchImages = async () => {
     try {
-      // Now we can list from root since the prefix is set in config
-      const s3Objects = await Storage.list('', { 
+      const s3Objects = await Storage.list('full_imgs/', { 
         pageSize: 1000,
-        level: 'public'  // Specify the access level
+        level: 'public'
       });
       
       const imageFiles = s3Objects
@@ -28,30 +29,40 @@ const App = () => {
           const isNotDirectory = !item.key.endsWith('/');
           return isImage && isNotDirectory;
         })
-        .map(async (item) => {
-          const url = await Storage.get(item.key, { level: 'public' });
-          return {
-            id: item.key.split('/').pop(),
-            fullPath: url,
-            thumbnail: url,
-            title: item.key.split('/').pop(),
-            lastModified: item.lastModified
-          };
-        });
-  
+        .map(item => ({
+          id: item.key.split('/').pop(),
+          fullPath: `${BUCKET_URL}/${item.key}`,
+          thumbnail: `${BUCKET_URL}/${item.key}`,
+          title: item.key.split('/').pop(),
+          lastModified: item.lastModified
+        }));
 
-      const resolvedImages = await Promise.all(imageFiles);
-      const sortedImages = resolvedImages.sort((a, b) => 
-        b.lastModified - a.lastModified
-      );
-
-      setImages(sortedImages);
+      setImages(imageFiles);
       
-      if (sortedImages.length > 0) {
-        handleImageSelect(sortedImages[0].id);
+      if (imageFiles.length > 0) {
+        handleImageSelect(imageFiles[0].id);
       }
     } catch (error) {
       console.error('Error fetching images:', error);
+      // Fallback to hardcoded list for testing
+      const fallbackImages = [
+        'WBS_001459_20250107_172322.jpg',
+        'WBS_001573_20250107_174056.jpg',
+        'WBS_001580_20250107_174426.jpg',
+        'WBS_001581_20250107_174608.jpg',
+        'WBS_001584_20250107_174906.jpg'
+      ].map(filename => ({
+        id: filename,
+        fullPath: `${BUCKET_URL}/full_imgs/${filename}`,
+        thumbnail: `${BUCKET_URL}/full_imgs/${filename}`,
+        title: filename,
+        lastModified: new Date()
+      }));
+      
+      setImages(fallbackImages);
+      if (fallbackImages.length > 0) {
+        handleImageSelect(fallbackImages[0].id);
+      }
     }
   };
 
