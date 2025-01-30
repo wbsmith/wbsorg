@@ -23,11 +23,13 @@ const App = () => {
           .map(item => {
             const key = item.getElementsByTagName("Key")[0].textContent;
             if (key.match(/\.(jpg|jpeg|png)$/i)) {
+              const baseUrl = `${bucketUrl}/${key}`;
               return {
                 id: key.split('/').pop(),
-                url: `${bucketUrl}/${key}`,
+                url: baseUrl,
                 title: key.split('/').pop(),
-                thumbnail: `${bucketUrl}/${key}`,
+                // Add size parameters for thumbnails if your S3 setup supports it
+                thumbnail: `${baseUrl}?width=200`,  // Adjust if your S3 config supports image resizing
                 lastModified: new Date(item.getElementsByTagName("LastModified")[0].textContent)
               };
             }
@@ -50,26 +52,30 @@ const App = () => {
 
   React.useEffect(() => {
     if (imageRef.current) {
-      // Destroy previous panzoom instance if it exists
       if (panzoomRef.current) {
         panzoomRef.current.destroy();
       }
 
-      // Create new panzoom instance
       panzoomRef.current = Panzoom(imageRef.current, {
         maxScale: 5,
         minScale: 0.5,
-        contain: 'outside'
+        contain: 'outside',
+        step: 0.1,          // Smaller steps for smoother zoom
+        smooth: true        // Enable smooth transformations
       });
 
-      // // Add wheel event listener for zoom
-      // imageRef.current.parentElement.addEventListener('wheel', (e) => {
-      //   e.preventDefault();
-      //   panzoomRef.current.zoomWithWheel(e);
-      // });
+      // Improved wheel handling
+      imageRef.current.parentElement.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const delta = e.deltaY;
+        const scale = delta > 0 ? 0.9 : 1.1;  // Smoother scale factor
+        panzoomRef.current.zoom(scale, {
+          animate: true,
+          focal: { x: e.clientX, y: e.clientY }
+        });
+      }, { passive: false });
     }
 
-    // Cleanup
     return () => {
       if (panzoomRef.current) {
         panzoomRef.current.destroy();
@@ -95,11 +101,13 @@ const App = () => {
                 ref={imageRef}
                 src={selectedImage.url} 
                 alt={selectedImage.title}
-                style={{ 
-                  maxWidth: '100%',
-                  maxHeight: '100%',
-                  objectFit: 'contain'
+                onLoad={(e) => {
+                  // Center the image after it loads
+                  if (panzoomRef.current) {
+                    panzoomRef.current.reset();
+                  }
                 }}
+                className="main-image"
               />
             </div>
           ) : (
