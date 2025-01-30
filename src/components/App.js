@@ -1,11 +1,8 @@
+// src/components/App.js
 import React from 'react';
 import CloverIIIF from '@samvera/clover-iiif';
-import Filmstrip from './Filmstrip';
 import { Storage } from 'aws-amplify';
-import '../amplify-config';
-
-const BUCKET_NAME = 'wbryansmith.org';
-const S3_URL = `https://${BUCKET_NAME}.s3.amazonaws.com`;
+import Filmstrip from './Filmstrip';
 
 const App = () => {
   const [images, setImages] = React.useState([]);
@@ -19,29 +16,27 @@ const App = () => {
 
   const fetchImages = async () => {
     try {
-      // List all objects with the prefix 'full_imgs/'
-      const s3Objects = await Storage.list('', {
-        bucket: BUCKET_NAME,
-        prefix: 'full_imgs/'
-      });
+      const s3Objects = await Storage.list('full_imgs/');
       
-      // Filter for image files and create image objects
       const imageFiles = s3Objects
         .filter(item => {
           const isImage = /\.(jpg|jpeg|png|gif)$/i.test(item.key);
           const isNotDirectory = !item.key.endsWith('/');
           return isImage && isNotDirectory;
         })
-        .map(item => ({
-          id: item.key.split('/').pop(),
-          fullPath: `${S3_URL}/${item.key}`,
-          thumbnail: `${S3_URL}/${item.key}`, // Using full image as thumbnail for now
-          title: item.key.split('/').pop(),
-          lastModified: item.lastModified
-        }));
+        .map(async (item) => {
+          const url = await Storage.get(item.key);
+          return {
+            id: item.key.split('/').pop(),
+            fullPath: url,
+            thumbnail: url, // Using full image as thumbnail for now
+            title: item.key.split('/').pop(),
+            lastModified: item.lastModified
+          };
+        });
 
-      // Sort by last modified date
-      const sortedImages = imageFiles.sort((a, b) => 
+      const resolvedImages = await Promise.all(imageFiles);
+      const sortedImages = resolvedImages.sort((a, b) => 
         b.lastModified - a.lastModified
       );
 

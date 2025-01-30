@@ -1,3 +1,4 @@
+// src/components/Filmstrip.js
 import React from 'react';
 
 const Filmstrip = ({ images, selectedImage, onImageSelect }) => {
