@@ -1,7 +1,6 @@
 // src/components/App.js
 import React from 'react';
 import CloverIIIF from '@samvera/clover-iiif';
-import { Storage } from 'aws-amplify';
 import Filmstrip from './Filmstrip';
 
 const BUCKET_URL = 'https://s3.us-west-1.amazonaws.com/wbryansmith.org';
@@ -13,58 +12,26 @@ const App = () => {
   const [loading, setLoading] = React.useState(false);
 
   React.useEffect(() => {
-    fetchImages();
-  }, []);
-
-  const fetchImages = async () => {
-    try {
-      const s3Objects = await Storage.list('full_imgs/', { 
-        pageSize: 1000,
-        level: 'public'
-      });
-      
-      const imageFiles = s3Objects
-        .filter(item => {
-          const isImage = /\.(jpg|jpeg|png|gif)$/i.test(item.key);
-          const isNotDirectory = !item.key.endsWith('/');
-          return isImage && isNotDirectory;
-        })
-        .map(item => ({
-          id: item.key.split('/').pop(),
-          fullPath: `${BUCKET_URL}/${item.key}`,
-          thumbnail: `${BUCKET_URL}/${item.key}`,
-          title: item.key.split('/').pop(),
-          lastModified: item.lastModified
-        }));
-
-      setImages(imageFiles);
-      
-      if (imageFiles.length > 0) {
-        handleImageSelect(imageFiles[0].id);
-      }
-    } catch (error) {
-      console.error('Error fetching images:', error);
-      // Fallback to hardcoded list for testing
-      const fallbackImages = [
-        'WBS_001459_20250107_172322.jpg',
-        'WBS_001573_20250107_174056.jpg',
-        'WBS_001580_20250107_174426.jpg',
-        'WBS_001581_20250107_174608.jpg',
-        'WBS_001584_20250107_174906.jpg'
-      ].map(filename => ({
-        id: filename,
-        fullPath: `${BUCKET_URL}/full_imgs/${filename}`,
-        thumbnail: `${BUCKET_URL}/full_imgs/${filename}`,
-        title: filename,
-        lastModified: new Date()
-      }));
-      
-      setImages(fallbackImages);
-      if (fallbackImages.length > 0) {
-        handleImageSelect(fallbackImages[0].id);
-      }
+    // Using hardcoded images since we know they work
+    const imageFiles = [
+      'WBS_001459_20250107_172322.jpg',
+      'WBS_001573_20250107_174056.jpg',
+      'WBS_001580_20250107_174426.jpg',
+      'WBS_001581_20250107_174608.jpg',
+      'WBS_001584_20250107_174906.jpg'
+    ].map(filename => ({
+      id: filename,
+      fullPath: `${BUCKET_URL}/full_imgs/${filename}`,
+      thumbnail: `${BUCKET_URL}/full_imgs/${filename}`,
+      title: filename,
+      lastModified: new Date()
+    }));
+    
+    setImages(imageFiles);
+    if (imageFiles.length > 0) {
+      handleImageSelect(imageFiles[0].id);
     }
-  };
+  }, []);
 
   const handleImageSelect = async (imageId) => {
     try {
@@ -81,15 +48,6 @@ const App = () => {
         "id": `https://www.wbryansmith.org/manifest/${imageId}`,
         "type": "Manifest",
         "label": { "en": [selectedImage.title] },
-        "rights": "http://creativecommons.org/licenses/by/4.0/",
-        "rendering": [
-          {
-            "id": selectedImage.fullPath,
-            "type": "Image",
-            "label": { "en": ["Download as JPG"] },
-            "format": "image/jpeg"
-          }
-        ],
         "items": [
           {
             "id": `https://www.wbryansmith.org/canvas/${imageId}`,
@@ -111,14 +69,7 @@ const App = () => {
                       "type": "Image",
                       "format": "image/jpeg",
                       "width": 4000,
-                      "height": 3000,
-                      "service": [
-                        {
-                          "id": selectedImage.fullPath.split('.')[0],
-                          "profile": "level0",
-                          "type": "ImageService3"
-                        }
-                      ]
+                      "height": 3000
                     }
                   }
                 ]
