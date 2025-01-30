@@ -50,34 +50,45 @@ const App = () => {
   const handleImageSelect = (image) => {
     setSelectedImage(image);
     
+    // Updated manifest structure
     const manifest = {
-      "@context": ["http://iiif.io/api/presentation/3/context.json"],
-      "id": `https://www.wbryansmith.org/manifest/${image.id}`,
+      "@context": "http://iiif.io/api/presentation/3/context.json",
+      "id": image.url,
       "type": "Manifest",
       "label": { "en": [image.title] },
+      "rendering": [{
+        "id": image.url,
+        "type": "Image",
+        "label": { "en": ["Original Image"] },
+        "format": "image/jpeg"
+      }],
+      "start": {
+        "id": image.url,
+        "type": "Canvas"
+      },
       "items": [
         {
-          "id": `https://www.wbryansmith.org/canvas/${image.id}`,
+          "id": image.url + "/canvas",
           "type": "Canvas",
-          "width": 4000,
           "height": 3000,
+          "width": 4000,
           "items": [
             {
-              "id": `https://www.wbryansmith.org/page/${image.id}`,
+              "id": image.url + "/page",
               "type": "AnnotationPage",
               "items": [
                 {
-                  "id": `https://www.wbryansmith.org/annotation/${image.id}`,
+                  "id": image.url + "/annotation",
                   "type": "Annotation",
                   "motivation": "painting",
-                  "target": `https://www.wbryansmith.org/canvas/${image.id}`,
                   "body": {
                     "id": image.url,
                     "type": "Image",
                     "format": "image/jpeg",
-                    "width": 4000,
-                    "height": 3000
-                  }
+                    "height": 3000,
+                    "width": 4000
+                  },
+                  "target": image.url + "/canvas"
                 }
               ]
             }
@@ -86,6 +97,7 @@ const App = () => {
       ]
     };
     
+    console.log('Setting manifest:', manifest);
     setCurrentManifest(manifest);
   };
 
@@ -104,7 +116,8 @@ const App = () => {
                 options={{
                   canvasHeight: '60vh',
                   showIIIFBadge: false,
-                  showTitle: false
+                  showTitle: false,
+                  showImageCaption: false
                 }}
               />
             </div>
