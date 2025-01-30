@@ -23,11 +23,13 @@ const App = () => {
           .map(item => {
             const key = item.getElementsByTagName("Key")[0].textContent;
             if (key.match(/\.(jpg|jpeg|png)$/i)) {
+              const baseUrl = `${bucketUrl}/${key}`;
               return {
                 id: key.split('/').pop(),
-                url: `${bucketUrl}/${key}`,
+                url: baseUrl,  // Full size image for the viewer
                 title: key.split('/').pop(),
-                thumbnail: `${bucketUrl}/${key}`,
+                // Thumbnail with S3 image processing
+                thumbnail: `${baseUrl}?x-amz-process=image/resize,h_150,w_200,fit-cover`,
                 lastModified: new Date(item.getElementsByTagName("LastModified")[0].textContent)
               };
             }
