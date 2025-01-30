@@ -1,12 +1,13 @@
 // src/components/App.js
 import React from 'react';
-import CloverIIIF from '@samvera/clover-iiif';
+import Panzoom from '@panzoom/panzoom';
 import Filmstrip from './Filmstrip';
 
 const App = () => {
   const [images, setImages] = React.useState([]);
   const [selectedImage, setSelectedImage] = React.useState(null);
-  const [currentManifest, setCurrentManifest] = React.useState(null);
+  const imageRef = React.useRef(null);
+  const panzoomRef = React.useRef(null);
 
   React.useEffect(() => {
     const fetchImages = async () => {
@@ -47,51 +48,37 @@ const App = () => {
     fetchImages();
   }, []);
 
+  React.useEffect(() => {
+    if (imageRef.current) {
+      // Destroy previous panzoom instance if it exists
+      if (panzoomRef.current) {
+        panzoomRef.current.destroy();
+      }
+
+      // Create new panzoom instance
+      panzoomRef.current = Panzoom(imageRef.current, {
+        maxScale: 5,
+        minScale: 0.5,
+        contain: 'outside'
+      });
+
+      // Add wheel event listener for zoom
+      imageRef.current.parentElement.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        panzoomRef.current.zoomWithWheel(e);
+      });
+    }
+
+    // Cleanup
+    return () => {
+      if (panzoomRef.current) {
+        panzoomRef.current.destroy();
+      }
+    };
+  }, [selectedImage]);
+
   const handleImageSelect = (image) => {
     setSelectedImage(image);
-    
-    const manifest = {
-      "@context": "http://iiif.io/api/presentation/3/context.json",
-      "id": "https://example.org/manifest.json",
-      "type": "Manifest",
-      "label": {
-        "en": [
-          image.title
-        ]
-      },
-      "items": [
-        {
-          "id": "https://example.org/canvas/p1",
-          "type": "Canvas",
-          "height": 3000,
-          "width": 4000,
-          "items": [
-            {
-              "id": "https://example.org/page/p1/1",
-              "type": "AnnotationPage",
-              "items": [
-                {
-                  "id": "https://example.org/annotation/p0001-image",
-                  "type": "Annotation",
-                  "motivation": "painting",
-                  "body": {
-                    "id": image.url,    // This is our actual S3 image URL
-                    "type": "Image",
-                    "format": "image/jpeg",
-                    "height": 3000,
-                    "width": 4000
-                  },
-                  "target": "https://example.org/canvas/p1"
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    };
-    
-    console.log('Setting manifest:', manifest);
-    setCurrentManifest(manifest);
   };
 
   return (
@@ -102,15 +89,16 @@ const App = () => {
       
       <main>
         <div className="viewer-section">
-          {currentManifest ? (
+          {selectedImage ? (
             <div className="viewer-container">
-              <CloverIIIF
-                manifest={currentManifest}
-                options={{
-                  canvasHeight: '60vh',
-                  showIIIFBadge: false,
-                  showTitle: false,
-                  showImageCaption: false
+              <img 
+                ref={imageRef}
+                src={selectedImage.url} 
+                alt={selectedImage.title}
+                style={{ 
+                  maxWidth: '100%',
+                  maxHeight: '100%',
+                  objectFit: 'contain'
                 }}
               />
             </div>
