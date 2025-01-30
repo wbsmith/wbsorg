@@ -1,6 +1,7 @@
 {
-  "name": "photo-viewer",
+  "name": "wbsorg",
   "version": "1.0.0",
+  "private": true,
   "dependencies": {
     "@aws-amplify/storage": "^5.0.0",
     "@samvera/clover-iiif": "^1.13.1",
@@ -13,15 +14,14 @@
     "@babel/preset-env": "^7.22.20",
     "@babel/preset-react": "^7.22.15",
     "babel-loader": "^9.1.3",
-    "copy-webpack-plugin": "^12.0.2",
+    "copy-webpack-plugin": "^11.0.0",
     "css-loader": "^6.8.1",
-    "html-webpack-plugin": "^5.5.0",
     "style-loader": "^3.3.3",
     "webpack": "^5.88.2",
     "webpack-cli": "^5.1.4"
   },
   "scripts": {
     "build": "webpack --mode production",
-    "dev": "webpack serve --mode development"
+    "start": "webpack serve --mode development"
   }
 }

@@ -1,3 +1,4 @@
+// src/config/amplify.js
 import { Amplify } from 'aws-amplify';
 
 Amplify.configure({
@@ -6,7 +7,7 @@ Amplify.configure({
       bucket: 'wbryansmith.org',
       region: 'us-west-1',
       customPrefix: {
-        public: ''  // This ensures we don't get an extra prefix in our paths
+        public: ''  // Ensures no extra prefix in our paths
       }
     }
   }
