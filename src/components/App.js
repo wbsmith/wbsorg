@@ -1,4 +1,3 @@
-// src/components/App.js
 import React from 'react';
 import OpenSeadragon from 'openseadragon';
 import Filmstrip from './Filmstrip';
@@ -11,21 +10,19 @@ const App = () => {
   const [viewerError, setViewerError] = React.useState(false);
 
   const handleImageSelect = React.useCallback((image) => {
-    if (!viewer || viewerError) return;  // Don't try if viewer isn't ready or had error
+    if (!viewer || viewerError) return;
 
     try {
+      console.log('Loading image:', image.url);
       setSelectedImage(image);
       viewer.open({
         type: 'image',
         url: image.url,
-        crossOriginPolicy: 'Anonymous',
-        buildPyramid: false,
-        immediateRender: true,
         success: () => {
-          console.log('Image loaded successfully:', image.title);
+          console.log('Successfully loaded image:', image.title);
         },
-        error: (error) => {
-          console.error('Failed to load image:', error);
+        error: (err) => {
+          console.error('Failed to load image:', err);
           setViewerError(true);
         }
       });
@@ -69,50 +66,41 @@ const App = () => {
         if (mounted) {
           setImages(imageList);
           
-          // Initialize OpenSeadragon with error handling
           try {
-            viewerInstance = OpenSeadragon({
+            viewerInstance = new OpenSeadragon({
               id: 'openseadragon-viewer',
               prefixUrl: 'https://cdn.jsdelivr.net/npm/openseadragon@3.1/build/openseadragon/images/',
-              crossOriginPolicy: 'Anonymous',
-              loadTilesWithAjax: true,
-              animationTime: 0.3,
-              blendTime: 0.1,
-              constrainDuringPan: true,
-              maxZoomPixelRatio: 1,
-              minZoomLevel: 0.5,
-              maxZoomLevel: 5,
-              visibilityRatio: 0.8,
-              immediateRender: true,
-              debugMode: false,
-              showNavigator: false,
-              preserveImageSizeOnResize: true,
+              showNavigationControl: true,
               defaultZoomLevel: 0,
-              minPixelRatio: 0.5,
-              placeholderFillStyle: 'black',
+              maxZoomPixelRatio: 2,
+              minZoomLevel: 0.5,
+              maxZoomLevel: 10,
+              visibilityRatio: 1,
               gestureSettingsMouse: {
                 scrollToZoom: true,
-                clickToZoom: false,
+                clickToZoom: true,
                 dblClickToZoom: true,
                 pinchToZoom: true
               }
             });
 
-            // Add error handlers
-            viewerInstance.addHandler('open-failed', () => {
-              console.error('Failed to open viewer');
+            viewerInstance.addHandler('open', () => {
+              console.log('Viewer opened successfully');
+            });
+
+            viewerInstance.addHandler('error', () => {
+              console.error('Viewer encountered an error');
               setViewerError(true);
             });
 
-            viewerInstance.addHandler('ready', () => {
-              if (mounted) {
-                setViewer(viewerInstance);
-                // Only try to load first image if everything is working
-                if (imageList.length > 0 && !viewerError) {
-                  setTimeout(() => handleImageSelect(imageList[0]), 100);
-                }
-              }
-            });
+            setViewer(viewerInstance);
+
+            // Load the first image after a short delay
+            if (imageList.length > 0) {
+              setTimeout(() => {
+                handleImageSelect(imageList[0]);
+              }, 500);
+            }
 
           } catch (error) {
             console.error('Error initializing OpenSeadragon:', error);
