@@ -32,21 +32,31 @@ body {
   margin-bottom: 1rem;
  }
  
- .viewer-container {
+ .main-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  cursor: zoom-in;
+}
+
+.viewer-container {
   width: 100%;
   height: 60vh;
-  border: 1px solid rgb(75, 122, 255);
-  background-color: black;
- }
- 
- .loading {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 60vh;
-  font-size: 1.2rem;
+  background-color: black;
+  position: relative;
+}
+
+.loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   color: rgb(75, 122, 255);
- }
+  z-index: 1000;
+}
  
  .no-image-selected {
   display: flex;
