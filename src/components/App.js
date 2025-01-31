@@ -25,11 +25,12 @@ const App = () => {
           .map(item => {
             const key = item.getElementsByTagName("Key")[0].textContent;
             if (key.match(/\.(jpg|jpeg|png)$/i)) {
+              const filename = key.split('/').pop();
               return {
-                id: key.split('/').pop(),
-                url: `${bucketUrl}/${key}`,
-                title: key.split('/').pop(),
-                thumbnail: `${bucketUrl}/thumbnails/${key.split('/').pop()}`,  // Changed this line
+                id: filename,
+                url: `${bucketUrl}/${encodeURIComponent(key)}`,
+                title: filename,
+                thumbnail: `${bucketUrl}/thumbnails/${encodeURIComponent(filename)}`,
                 lastModified: new Date(item.getElementsByTagName("LastModified")[0].textContent)
               };
             }
