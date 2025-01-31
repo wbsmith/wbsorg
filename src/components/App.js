@@ -7,89 +7,62 @@ const App = () => {
   const [selectedImage, setSelectedImage] = React.useState(null);
   const [viewer, setViewer] = React.useState(null);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [viewerError, setViewerError] = React.useState(false);
+  const [imageAspectRatio, setImageAspectRatio] = React.useState(4/3); // default ratio
 
-  React.useEffect(() => {
-    const fetchImages = async () => {
-      try {
-        const bucketUrl = 'https://s3.us-west-1.amazonaws.com/wbryansmith.org';
-        const response = await fetch(`${bucketUrl}?list-type=2&prefix=full_imgs/`);
-        const data = await response.text();
-        const parser = new DOMParser();
-        const xmlDoc = parser.parseFromString(data, "text/xml");
-        const contents = xmlDoc.getElementsByTagName("Contents");
-        
-        const imageList = Array.from(contents)
-          .map(item => {
-            const key = item.getElementsByTagName("Key")[0].textContent;
-            if (key.match(/\.(jpg|jpeg|png)$/i)) {
-              const filename = key.split('/').pop();
-              return {
-                id: filename,
-                url: `${bucketUrl}/${key}`,
-                title: filename,
-                thumbnail: `${bucketUrl}/thumbnails/${filename}`,
-                lastModified: new Date(item.getElementsByTagName("LastModified")[0].textContent)
-              };
-            }
-            return null;
-          })
-          .filter(item => item !== null)
-          .sort((a, b) => b.lastModified - a.lastModified);
-
-        setImages(imageList);
-        if (imageList.length > 0) {
-          handleImageSelect(imageList[0]);
-        }
-      } catch (error) {
-        console.error('Error fetching images:', error);
-      } finally {
-        setIsLoading(false);
-      }
+  const updateViewportSize = (imageUrl) => {
+    const img = new Image();
+    img.onload = () => {
+      const ratio = img.width / img.height;
+      setImageAspectRatio(ratio);
     };
-
-    fetchImages();
-
-    // Initialize OpenSeadragon
-    const viewer = OpenSeadragon({
-      id: 'openseadragon-viewer',
-      prefixUrl: 'https://cdn.jsdelivr.net/npm/openseadragon@3.1/build/openseadragon/images/',
-      crossOriginPolicy: 'Anonymous',
-      loadTilesWithAjax: true,
-      animationTime: 0.3,
-      blendTime: 0.1,
-      constrainDuringPan: true,
-      maxZoomPixelRatio: 1,
-      minZoomLevel: 0.5,
-      maxZoomLevel: 5,
-      visibilityRatio: 0.8,
-      immediateRender: true,
-      gestureSettingsMouse: {
-        scrollToZoom: true,
-        clickToZoom: false,
-        dblClickToZoom: true,
-        pinchToZoom: true
-      }
-    });
-
-    setViewer(viewer);
-
-    return () => {
-      viewer.destroy();
-    };
-  }, []);
+    img.src = imageUrl;
+  };
 
   const handleImageSelect = React.useCallback((image) => {
-    setSelectedImage(image);
-    if (viewer) {
+    if (!viewer || viewerError) return;
+
+    try {
+      setSelectedImage(image);
+      updateViewportSize(image.url);
       viewer.open({
         type: 'image',
         url: image.url,
         crossOriginPolicy: 'Anonymous',
         buildPyramid: false,
-        immediateRender: true
+        immediateRender: true,
+        success: () => {
+          console.log('Image loaded successfully:', image.title);
+        },
+        error: (error) => {
+          console.error('Failed to load image:', error);
+          setViewerError(true);
+        }
       });
+    } catch (error) {
+      console.error('Error in handleImageSelect:', error);
+      setViewerError(true);
     }
-  }, [viewer]);
+  }, [viewer, viewerError]);
+
+  // Rest of your existing useEffect and other code remains the same...
+
+  // Calculate viewport height based on available width and aspect ratio
+  const calculateViewportStyle = () => {
+    const viewportWidth = document.querySelector('.viewer-section')?.clientWidth || window.innerWidth;
+    const viewportHeight = viewportWidth / imageAspectRatio;
+    
+    // Optional: Set maximum height to prevent extremely tall/short viewports
+    const maxHeight = window.innerHeight * 0.7; // 70% of window height
+    const minHeight = window.innerHeight * 0.3; // 30% of window height
+    
+    return {
+      height: Math.min(Math.max(viewportHeight, minHeight), maxHeight),
+      width: '100%',
+      border: '1px solid rgb(75, 122, 255)',
+      backgroundColor: 'black'
+    };
+  };
 
   return (
     <div className="app-container">
@@ -99,10 +72,17 @@ const App = () => {
       
       <main>
         <div className="viewer-section">
-          <div 
-            id="openseadragon-viewer" 
-            className="viewer-container"
-          />
+          {viewerError ? (
+            <div className="viewer-error">
+              Error loading viewer. Please refresh the page.
+            </div>
+          ) : (
+            <div 
+              id="openseadragon-viewer" 
+              className="viewer-container"
+              style={calculateViewportStyle()}
+            />
+          )}
         </div>
         
         <Filmstrip
