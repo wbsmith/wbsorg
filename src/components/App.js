@@ -11,26 +11,36 @@ const App = () => {
  const [isLoading, setIsLoading] = React.useState(true);
 
  const getImageCreationDate = async (url) => {
-   return new Promise((resolve) => {
-     const img = new Image();
-     img.crossOrigin = "Anonymous";
-     img.onload = function() {
-       EXIF.getData(img, function() {
-         const dateTimeOriginal = EXIF.getTag(this, "DateTimeOriginal");
-         if (dateTimeOriginal) {
-           // EXIF date format is "YYYY:MM:DD HH:MM:SS"
-           const [date, time] = dateTimeOriginal.split(' ');
-           const [year, month, day] = date.split(':');
-           const [hour, minute, second] = time.split(':');
-           resolve(new Date(year, month-1, day, hour, minute, second));
-         } else {
-           resolve(new Date(0)); // fallback for images without EXIF data
-         }
-       });
-     };
-     img.src = url;
-   });
- };
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "Anonymous";
+    img.onload = function() {
+      EXIF.getData(img, function() {
+        const dateTimeOriginal = EXIF.getTag(this, "DateTimeOriginal");
+        if (dateTimeOriginal) {
+          try {
+            const timestamp = new Date(dateTimeOriginal);
+            if (isNaN(timestamp)) {
+              resolve(new Date(0));
+            } else {
+              resolve(timestamp);
+            }
+          } catch (error) {
+            console.error('Error parsing EXIF date:', error);
+            resolve(new Date(0));
+          }
+        } else {
+          resolve(new Date(0));
+        }
+      });
+    };
+    img.onerror = function() {
+      console.error('Error loading image for EXIF data:', url);
+      resolve(new Date(0));
+    };
+    img.src = url;
+  });
+};
 
  React.useEffect(() => {
    const fetchImages = async () => {
