@@ -1,5 +1,4 @@
-import React from 'react';
-
+// src/components/Filmstrip.js
 const Filmstrip = ({ images, selectedImage, onImageSelect }) => {
   const scrollRef = React.useRef(null);
 
