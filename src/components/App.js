@@ -83,25 +83,17 @@ const App = () => {
               maxZoomLevel: 5,
               visibilityRatio: 0.8,
               immediateRender: true,
+              debugMode: false,
+              showNavigator: false,
+              preserveImageSizeOnResize: true,
+              defaultZoomLevel: 0,
+              minPixelRatio: 0.5,
+              placeholderFillStyle: 'black',
               gestureSettingsMouse: {
                 scrollToZoom: true,
                 clickToZoom: false,
                 dblClickToZoom: true,
                 pinchToZoom: true
-              },
-              debugMode: false,
-              showNavigator: false,
-              useCanvas: true,
-              preserveImageSizeOnResize: true,
-              defaultZoomLevel: 0,
-              minPixelRatio: 0.5,
-              seamlessMode: false,
-              placeholderFillStyle: 'black',
-              wrapHorizontal: false,
-              wrapVertical: false,
-              drawer: {
-                type: 'canvas',
-                useWebGL: false
               }
             });
 
