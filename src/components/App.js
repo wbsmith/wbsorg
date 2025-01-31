@@ -7,22 +7,36 @@ const App = () => {
   const [selectedImage, setSelectedImage] = React.useState(null);
   const [viewer, setViewer] = React.useState(null);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [viewerError, setViewerError] = React.useState(false);
 
   const handleImageSelect = React.useCallback((image) => {
-    setSelectedImage(image);
-    if (viewer) {
+    if (!viewer || viewerError) return;  // Don't try if viewer isn't ready or had error
+
+    try {
+      setSelectedImage(image);
       viewer.open({
         type: 'image',
         url: image.url,
         crossOriginPolicy: 'Anonymous',
         buildPyramid: false,
-        immediateRender: true
+        immediateRender: true,
+        success: () => {
+          console.log('Image loaded successfully:', image.title);
+        },
+        error: (error) => {
+          console.error('Failed to load image:', error);
+          setViewerError(true);
+        }
       });
+    } catch (error) {
+      console.error('Error in handleImageSelect:', error);
+      setViewerError(true);
     }
-  }, [viewer]);
+  }, [viewer, viewerError]);
 
   React.useEffect(() => {
     let mounted = true;
+    let viewerInstance = null;
 
     const fetchImages = async () => {
       try {
@@ -54,36 +68,63 @@ const App = () => {
         if (mounted) {
           setImages(imageList);
           
-          // Initialize OpenSeadragon
-          const viewer = OpenSeadragon({
-            id: 'openseadragon-viewer',
-            prefixUrl: 'https://cdn.jsdelivr.net/npm/openseadragon@3.1/build/openseadragon/images/',
-            crossOriginPolicy: 'Anonymous',
-            loadTilesWithAjax: true,
-            animationTime: 0.3,
-            blendTime: 0.1,
-            constrainDuringPan: true,
-            maxZoomPixelRatio: 1,
-            minZoomLevel: 0.5,
-            maxZoomLevel: 5,
-            visibilityRatio: 0.8,
-            immediateRender: true,
-            gestureSettingsMouse: {
-              scrollToZoom: true,
-              clickToZoom: false,
-              dblClickToZoom: true,
-              pinchToZoom: true
-            }
-          });
+          // Initialize OpenSeadragon with error handling
+          try {
+            viewerInstance = OpenSeadragon({
+              id: 'openseadragon-viewer',
+              prefixUrl: 'https://cdn.jsdelivr.net/npm/openseadragon@3.1/build/openseadragon/images/',
+              crossOriginPolicy: 'Anonymous',
+              loadTilesWithAjax: true,
+              animationTime: 0.3,
+              blendTime: 0.1,
+              constrainDuringPan: true,
+              maxZoomPixelRatio: 1,
+              minZoomLevel: 0.5,
+              maxZoomLevel: 5,
+              visibilityRatio: 0.8,
+              immediateRender: true,
+              gestureSettingsMouse: {
+                scrollToZoom: true,
+                clickToZoom: false,
+                dblClickToZoom: true,
+                pinchToZoom: true
+              },
+              debugMode: false,
+              showNavigator: false,
+              useCanvas: true,
+              preserveImageSizeOnResize: true,
+              defaultZoomLevel: 0,
+              minPixelRatio: 0.5,
+              seamlessMode: false,
+              placeholderFillStyle: 'black',
+              wrapHorizontal: false,
+              wrapVertical: false,
+              drawer: {
+                type: 'canvas',
+                useWebGL: false
+              }
+            });
 
-          setViewer(viewer);
+            // Add error handlers
+            viewerInstance.addHandler('open-failed', () => {
+              console.error('Failed to open viewer');
+              setViewerError(true);
+            });
 
-          // Wait a bit for viewer to initialize before loading first image
-          setTimeout(() => {
-            if (imageList.length > 0) {
-              handleImageSelect(imageList[0]);
-            }
-          }, 100);
+            viewerInstance.addHandler('ready', () => {
+              if (mounted) {
+                setViewer(viewerInstance);
+                // Only try to load first image if everything is working
+                if (imageList.length > 0 && !viewerError) {
+                  setTimeout(() => handleImageSelect(imageList[0]), 100);
+                }
+              }
+            });
+
+          } catch (error) {
+            console.error('Error initializing OpenSeadragon:', error);
+            setViewerError(true);
+          }
         }
       } catch (error) {
         console.error('Error fetching images:', error);
@@ -98,8 +139,12 @@ const App = () => {
 
     return () => {
       mounted = false;
-      if (viewer) {
-        viewer.destroy();
+      if (viewerInstance) {
+        try {
+          viewerInstance.destroy();
+        } catch (error) {
+          console.error('Error destroying viewer:', error);
+        }
       }
     };
   }, [handleImageSelect]);
@@ -112,10 +157,16 @@ const App = () => {
       
       <main>
         <div className="viewer-section">
-          <div 
-            id="openseadragon-viewer" 
-            className="viewer-container"
-          />
+          {viewerError ? (
+            <div className="viewer-error">
+              Error loading viewer. Please refresh the page.
+            </div>
+          ) : (
+            <div 
+              id="openseadragon-viewer" 
+              className="viewer-container"
+            />
+          )}
         </div>
         
         <Filmstrip
