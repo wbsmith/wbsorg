@@ -7,11 +7,12 @@ const App = () => {
   const [images, setImages] = React.useState([]);
   const [selectedImage, setSelectedImage] = React.useState(null);
   const [viewer, setViewer] = React.useState(null);
-  const viewerRef = React.useRef(null);
+  const [isLoading, setIsLoading] = React.useState(true);
 
   React.useEffect(() => {
     const fetchImages = async () => {
       try {
+        setIsLoading(true);
         const bucketUrl = 'https://s3.us-west-1.amazonaws.com/wbryansmith.org';
         const response = await fetch(`${bucketUrl}?list-type=2&prefix=full_imgs/`);
         const data = await response.text();
@@ -23,13 +24,12 @@ const App = () => {
           .map(item => {
             const key = item.getElementsByTagName("Key")[0].textContent;
             if (key.match(/\.(jpg|jpeg|png)$/i)) {
-              const baseUrl = `${bucketUrl}/${key}`;
               return {
                 id: key.split('/').pop(),
-                url: baseUrl,  // Full size image for the viewer
+                url: `${bucketUrl}/${key}`,
                 title: key.split('/').pop(),
-                // Thumbnail with S3 image processing
-                thumbnail: `${baseUrl}?x-amz-process=image/resize,h_150,w_200,fit-cover`,
+                // Will add thumbnail path once you create them
+                thumbnail: `${bucketUrl}/full_imgs/thumbnails/${key.split('/').pop()}`,
                 lastModified: new Date(item.getElementsByTagName("LastModified")[0].textContent)
               };
             }
@@ -44,28 +44,47 @@ const App = () => {
         }
       } catch (error) {
         console.error('Error fetching images:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
     fetchImages();
 
-    // Initialize OpenSeadragon
+    // Initialize OpenSeadragon with optimized settings
     const viewer = OpenSeadragon({
       id: 'openseadragon-viewer',
       prefixUrl: 'https://cdn.jsdelivr.net/npm/openseadragon@3.1/build/openseadragon/images/',
-      animationTime: 0.5,
+      crossOriginPolicy: 'Anonymous',
+      loadTilesWithAjax: true,
+      ajaxHeaders: {
+        'Access-Control-Allow-Origin': '*'
+      },
+      // Performance optimizations
+      animationTime: 0.3,
       blendTime: 0.1,
       constrainDuringPan: true,
-      maxZoomPixelRatio: 2,
+      maxZoomPixelRatio: 1,
       minZoomLevel: 0.5,
-      maxZoomLevel: 10,
-      visibilityRatio: 1,
+      maxZoomLevel: 5,
+      visibilityRatio: 0.8,
+      immediateRender: true,
+      preload: true,
+      debugMode: false,
+      // Mouse settings
       gestureSettingsMouse: {
         scrollToZoom: true,
-        clickToZoom: true,
+        clickToZoom: false,
         dblClickToZoom: true,
         pinchToZoom: true
-      }
+      },
+      // Tile settings for better performance
+      tileCache: {
+        maxImageCacheCount: 200
+      },
+      // Disable unnecessary features
+      showNavigator: false,
+      autoHideControls: true
     });
 
     setViewer(viewer);
@@ -75,16 +94,25 @@ const App = () => {
     };
   }, []);
 
-  const handleImageSelect = (image) => {
+  const handleImageSelect = React.useCallback((image) => {
     setSelectedImage(image);
     if (viewer) {
-      viewer.open({
-        type: 'image',
-        url: image.url,
-        buildPyramid: false
+      // Use requestAnimationFrame for smoother transitions
+      requestAnimationFrame(() => {
+        viewer.open({
+          type: 'image',
+          url: image.url,
+          crossOriginPolicy: 'Anonymous',
+          buildPyramid: false,
+          ajaxWithCredentials: false,
+          immediateRender: true,
+          success: () => {
+            viewer.viewport.goHome(true);
+          }
+        });
       });
     }
-  };
+  }, [viewer]);
 
   return (
     <div className="app-container">
@@ -97,7 +125,6 @@ const App = () => {
           <div 
             id="openseadragon-viewer" 
             className="viewer-container"
-            ref={viewerRef}
           />
         </div>
         
@@ -105,10 +132,11 @@ const App = () => {
           images={images}
           selectedImage={selectedImage}
           onImageSelect={handleImageSelect}
+          isLoading={isLoading}
         />
       </main>
     </div>
   );
 };
 
-export default App;
+export default React.memo(App);
