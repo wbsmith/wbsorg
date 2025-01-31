@@ -8,8 +8,21 @@ const App = () => {
   const [viewer, setViewer] = React.useState(null);
   const [isLoading, setIsLoading] = React.useState(true);
 
+  const handleImageSelect = React.useCallback((image) => {
+    setSelectedImage(image);
+    if (viewer) {
+      viewer.open({
+        type: 'image',
+        url: image.url,
+        crossOriginPolicy: 'Anonymous',
+        buildPyramid: false,
+        immediateRender: true
+      });
+    }
+  }, [viewer]);
+
   React.useEffect(() => {
-    let mounted = true;  // For cleanup
+    let mounted = true;
 
     const fetchImages = async () => {
       try {
@@ -63,14 +76,14 @@ const App = () => {
             }
           });
 
-          // Wait for viewer to be ready
-          viewer.addOnceHandler('open', () => {
-            setViewer(viewer);
-            // Now load the first image
+          setViewer(viewer);
+
+          // Wait a bit for viewer to initialize before loading first image
+          setTimeout(() => {
             if (imageList.length > 0) {
               handleImageSelect(imageList[0]);
             }
-          });
+          }, 100);
         }
       } catch (error) {
         console.error('Error fetching images:', error);
@@ -89,7 +102,7 @@ const App = () => {
         viewer.destroy();
       }
     };
-  }, []);  // Remove handleImageSelect from dependencies
+  }, [handleImageSelect]);
 
   return (
     <div className="app-container">
