@@ -1,4 +1,3 @@
-// src/components/App.js
 import React from 'react';
 import OpenSeadragon from 'openseadragon';
 import Filmstrip from './Filmstrip';
@@ -7,7 +6,9 @@ const App = () => {
   const [images, setImages] = React.useState([]);
   const [selectedImage, setSelectedImage] = React.useState(null);
   const [viewer, setViewer] = React.useState(null);
+  const [isZoomMode, setIsZoomMode] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(true);
+  const viewerRef = React.useRef(null);
 
   React.useEffect(() => {
     const fetchImages = async () => {
@@ -28,8 +29,7 @@ const App = () => {
                 id: key.split('/').pop(),
                 url: `${bucketUrl}/${key}`,
                 title: key.split('/').pop(),
-                // Will add thumbnail path once you create them
-                thumbnail: `${bucketUrl}/full_imgs/thumbnails/${key.split('/').pop()}`,
+                thumbnail: `${bucketUrl}/thumbnails/${key.split('/').pop()}`,  // Changed this line
                 lastModified: new Date(item.getElementsByTagName("LastModified")[0].textContent)
               };
             }
@@ -40,7 +40,7 @@ const App = () => {
 
         setImages(imageList);
         if (imageList.length > 0) {
-          handleImageSelect(imageList[0]);
+          setSelectedImage(imageList[0]);
         }
       } catch (error) {
         console.error('Error fetching images:', error);
@@ -50,69 +50,59 @@ const App = () => {
     };
 
     fetchImages();
-
-    // Initialize OpenSeadragon with optimized settings
-    const viewer = OpenSeadragon({
-      id: 'openseadragon-viewer',
-      prefixUrl: 'https://cdn.jsdelivr.net/npm/openseadragon@3.1/build/openseadragon/images/',
-      crossOriginPolicy: 'Anonymous',
-      loadTilesWithAjax: true,
-      ajaxHeaders: {
-        'Access-Control-Allow-Origin': '*'
-      },
-      // Performance optimizations
-      animationTime: 0.3,
-      blendTime: 0.1,
-      constrainDuringPan: true,
-      maxZoomPixelRatio: 1,
-      minZoomLevel: 0.5,
-      maxZoomLevel: 5,
-      visibilityRatio: 0.8,
-      immediateRender: true,
-      preload: true,
-      debugMode: false,
-      // Mouse settings
-      gestureSettingsMouse: {
-        scrollToZoom: true,
-        clickToZoom: false,
-        dblClickToZoom: true,
-        pinchToZoom: true
-      },
-      // Tile settings for better performance
-      tileCache: {
-        maxImageCacheCount: 200
-      },
-      // Disable unnecessary features
-      showNavigator: false,
-      autoHideControls: true
-    });
-
-    setViewer(viewer);
-
-    return () => {
-      viewer.destroy();
-    };
   }, []);
+
+  const initializeViewer = React.useCallback(() => {
+    if (!viewer && selectedImage) {
+      const newViewer = OpenSeadragon({
+        id: 'openseadragon-viewer',
+        prefixUrl: 'https://cdn.jsdelivr.net/npm/openseadragon@3.1/build/openseadragon/images/',
+        crossOriginPolicy: 'Anonymous',
+        loadTilesWithAjax: true,
+        showNavigator: false,
+        immediateRender: true,
+        maxZoomPixelRatio: 1,
+        minZoomLevel: 0.5,
+        maxZoomLevel: 5,
+        gestureSettingsMouse: {
+          scrollToZoom: true,
+          dblClickToZoom: false
+        }
+      });
+
+      newViewer.addHandler('open', () => {
+        setIsLoading(false);
+      });
+
+      setViewer(newViewer);
+      return newViewer;
+    }
+    return viewer;
+  }, [viewer, selectedImage]);
 
   const handleImageSelect = React.useCallback((image) => {
     setSelectedImage(image);
+    setIsZoomMode(false);
     if (viewer) {
-      // Use requestAnimationFrame for smoother transitions
-      requestAnimationFrame(() => {
-        viewer.open({
-          type: 'image',
-          url: image.url,
-          crossOriginPolicy: 'Anonymous',
-          buildPyramid: false,
-          ajaxWithCredentials: false,
-          immediateRender: true,
-          success: () => {
-            viewer.viewport.goHome(true);
-          }
-        });
-      });
+      viewer.close();
     }
   }, [viewer]);
+
+  const handleImageClick = React.useCallback(() => {
+    if (!isZoomMode && selectedImage) {
+      setIsZoomMode(true);
+      setIsLoading(true);
+      const currentViewer = initializeViewer();
+      if (currentViewer) {
+        currentViewer.open({
+          type: 'image',
+          url: selectedImage.url,
+          crossOriginPolicy: 'Anonymous',
+          success: () => setIsLoading(false)
+        });
+      }
+    }
+  }, [isZoomMode, selectedImage, initializeViewer]);
 
   return (
     <div className="app-container">
@@ -122,10 +112,24 @@ const App = () => {
       
       <main>
         <div className="viewer-section">
-          <div 
-            id="openseadragon-viewer" 
-            className="viewer-container"
-          />
+          {selectedImage && (
+            <div 
+              className="viewer-container"
+              id="openseadragon-viewer"
+              ref={viewerRef}
+              onDoubleClick={handleImageClick}
+            >
+              {!isZoomMode && (
+                <img
+                  src={selectedImage.url}
+                  alt={selectedImage.title}
+                  className="main-image"
+                  crossOrigin="anonymous"
+                />
+              )}
+              {isLoading && <div className="loading">Loading...</div>}
+            </div>
+          )}
         </div>
         
         <Filmstrip
@@ -139,4 +143,4 @@ const App = () => {
   );
 };
 
-export default React.memo(App);
+export default App;
