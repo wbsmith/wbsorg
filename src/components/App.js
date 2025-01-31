@@ -9,6 +9,8 @@ const App = () => {
   const [isLoading, setIsLoading] = React.useState(true);
 
   React.useEffect(() => {
+    let mounted = true;  // For cleanup
+
     const fetchImages = async () => {
       try {
         const bucketUrl = 'https://s3.us-west-1.amazonaws.com/wbryansmith.org';
@@ -36,60 +38,58 @@ const App = () => {
           .filter(item => item !== null)
           .sort((a, b) => b.lastModified - a.lastModified);
 
-        setImages(imageList);
-        if (imageList.length > 0) {
-          handleImageSelect(imageList[0]);
+        if (mounted) {
+          setImages(imageList);
+          
+          // Initialize OpenSeadragon
+          const viewer = OpenSeadragon({
+            id: 'openseadragon-viewer',
+            prefixUrl: 'https://cdn.jsdelivr.net/npm/openseadragon@3.1/build/openseadragon/images/',
+            crossOriginPolicy: 'Anonymous',
+            loadTilesWithAjax: true,
+            animationTime: 0.3,
+            blendTime: 0.1,
+            constrainDuringPan: true,
+            maxZoomPixelRatio: 1,
+            minZoomLevel: 0.5,
+            maxZoomLevel: 5,
+            visibilityRatio: 0.8,
+            immediateRender: true,
+            gestureSettingsMouse: {
+              scrollToZoom: true,
+              clickToZoom: false,
+              dblClickToZoom: true,
+              pinchToZoom: true
+            }
+          });
+
+          // Wait for viewer to be ready
+          viewer.addOnceHandler('open', () => {
+            setViewer(viewer);
+            // Now load the first image
+            if (imageList.length > 0) {
+              handleImageSelect(imageList[0]);
+            }
+          });
         }
       } catch (error) {
         console.error('Error fetching images:', error);
       } finally {
-        setIsLoading(false);
+        if (mounted) {
+          setIsLoading(false);
+        }
       }
     };
 
     fetchImages();
 
-    // Initialize OpenSeadragon
-    const viewer = OpenSeadragon({
-      id: 'openseadragon-viewer',
-      prefixUrl: 'https://cdn.jsdelivr.net/npm/openseadragon@3.1/build/openseadragon/images/',
-      crossOriginPolicy: 'Anonymous',
-      loadTilesWithAjax: true,
-      animationTime: 0.3,
-      blendTime: 0.1,
-      constrainDuringPan: true,
-      maxZoomPixelRatio: 1,
-      minZoomLevel: 0.5,
-      maxZoomLevel: 5,
-      visibilityRatio: 0.8,
-      immediateRender: true,
-      gestureSettingsMouse: {
-        scrollToZoom: true,
-        clickToZoom: false,
-        dblClickToZoom: true,
-        pinchToZoom: true
-      }
-    });
-
-    setViewer(viewer);
-
     return () => {
-      viewer.destroy();
+      mounted = false;
+      if (viewer) {
+        viewer.destroy();
+      }
     };
-  }, []);
-
-  const handleImageSelect = React.useCallback((image) => {
-    setSelectedImage(image);
-    if (viewer) {
-      viewer.open({
-        type: 'image',
-        url: image.url,
-        crossOriginPolicy: 'Anonymous',
-        buildPyramid: false,
-        immediateRender: true
-      });
-    }
-  }, [viewer]);
+  }, []);  // Remove handleImageSelect from dependencies
 
   return (
     <div className="app-container">
