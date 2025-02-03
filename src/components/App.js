@@ -28,13 +28,17 @@ const App = () => {
                 url: `${bucketUrl}/${key}`,
                 title: filename,
                 thumbnail: `${bucketUrl}/thumbnails/${filename}`,
-                lastModified: new Date(item.getElementsByTagName("LastModified")[0].textContent)
+                //lastModified: new Date(item.getElementsByTagName("LastModified")[0].textContent)
               };
             }
             return null;
           })
           .filter(item => item !== null)
-          .sort((a, b) => b.lastModified - a.lastModified);
+          .sort((a, b) => {
+            const numA = a.id.split('_')[0];
+            const numB = b.id.split('_')[0];
+            return numA - numB;  // Changed to ascending order (oldest first)
+          });
 
         setImages(imageList);
         if (imageList.length > 0) {
