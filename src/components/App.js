@@ -35,9 +35,9 @@ const App = () => {
         .filter(item => item !== null);
 
         setImages(imageList);
-        if (imageList.length > 0) {
-          handleImageSelect(imageList[0]);
-        }
+        // if (imageList.length > 0) {
+        //   handleImageSelect(imageList[0]);
+        // }
       } catch (error) {
         console.error('Error fetching images:', error);
       } finally {
@@ -75,6 +75,13 @@ const App = () => {
       viewer.destroy();
     };
   }, []);
+
+  // Add a new useEffect to handle initial image selection
+  React.useEffect(() => {
+    if (viewer && images.length > 0 && !selectedImage) {
+      handleImageSelect(images[0]);
+    }
+  }, [viewer, images, selectedImage, handleImageSelect]);
 
   const handleImageSelect = React.useCallback((image) => {
     setSelectedImage(image);
