@@ -19,26 +19,20 @@ const App = () => {
         const contents = xmlDoc.getElementsByTagName("Contents");
         
         const imageList = Array.from(contents)
-          .map(item => {
-            const key = item.getElementsByTagName("Key")[0].textContent;
-            if (key.match(/\.(jpg|jpeg|png)$/i)) {
-              const filename = key.split('/').pop();
-              return {
-                id: filename,
-                url: `${bucketUrl}/${key}`,
-                title: filename,
-                thumbnail: `${bucketUrl}/thumbnails/${filename}`,
-                //lastModified: new Date(item.getElementsByTagName("LastModified")[0].textContent)
-              };
-            }
-            return null;
-          })
-          .filter(item => item !== null)
-          .sort((a, b) => {
-            const numA = a.id.split('_')[0];
-            const numB = b.id.split('_')[0];
-            return numA - numB;  // Changed to ascending order (oldest first)
-          });
+        .map(item => {
+          const key = item.getElementsByTagName("Key")[0].textContent;
+          if (key.match(/\.(jpg|jpeg|png)$/i)) {
+            const filename = key.split('/').pop();
+            return {
+              id: filename,
+              url: `${bucketUrl}/${key}`,
+              title: filename,
+              thumbnail: `${bucketUrl}/thumbnails/${filename}`
+            };
+          }
+          return null;
+        })
+        .filter(item => item !== null);
 
         setImages(imageList);
         if (imageList.length > 0) {
