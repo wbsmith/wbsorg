@@ -88,15 +88,25 @@ const App = () => {
   }, [viewer, images, selectedImage, handleImageSelect]);
 
   const handleImageSelect = React.useCallback((image) => {
+    console.log('Handling image select:', image);
     setSelectedImage(image);
     if (viewer) {
+      console.log('Viewer exists, attempting to open image');
       viewer.open({
         type: 'image',
         url: image.url,
         crossOriginPolicy: 'Anonymous',
         buildPyramid: false,
-        immediateRender: true
+        immediateRender: true,
+        success: function() {
+          console.log('Image loaded successfully');
+        },
+        error: function(err) {
+          console.error('Error loading image:', err);
+        }
       });
+    } else {
+      console.log('Viewer not initialized yet');
     }
   }, [viewer]);
 
