@@ -68,7 +68,11 @@ const App = () => {
         pinchToZoom: true
       }
     });
-
+    
+    viewer.addHandler('open', function() {
+      console.log('Viewer is ready and image is loaded');
+    });
+    
     setViewer(viewer);
 
     return () => {
