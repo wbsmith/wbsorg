@@ -19,7 +19,8 @@
     "css-loader": "latest",
     "style-loader": "latest",
     "webpack": "latest",
-    "webpack-cli": "latest"
+    "webpack-cli": "latest",
+    "webpack-dev-server": "^5.2.0"
   },
   "scripts": {
     "build": "webpack --mode production",
