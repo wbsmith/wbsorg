@@ -74,7 +74,7 @@ const App = () => {
         });
 
         viewer.addHandler('open', () => {
-          console.log('Viewer is ready and image is loaded');
+          console.log('Viewer is ready and image is loaded (inside OSD init useEffect)');
         });
 
         setViewer(viewer);
@@ -98,6 +98,9 @@ const App = () => {
   }, []);
 
   const handleImageSelect = React.useCallback((image) => {
+    console.log('handleImageSelect called with:', image); // Log the image object
+    console.log('Viewer state:', viewer); // Log the viewer object
+    console.log('Viewer open state:', viewer && viewer.isOpen()); // Log if viewer is open
     console.log('Handling image select:', image);
     setSelectedImage(image);
     if (viewer && viewer.isOpen()) { // Check if viewer is initialized and open
@@ -123,6 +126,7 @@ const App = () => {
 
   React.useEffect(() => {
     if (viewer && images.length > 0 && !selectedImage) {
+      console.log("useEffect running - attempting initial image load"); // Add this log
       handleImageSelect(images[0]);
     }
   }, [viewer, images, selectedImage]);
