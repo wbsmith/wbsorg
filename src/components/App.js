@@ -129,7 +129,7 @@ const App = () => {
       console.log("useEffect running - attempting initial image load"); // Add this log
       handleImageSelect(images[0]);
     }
-  }, [viewer, images, selectedImage]);
+  }, [viewer, images, selectedImage, handleImageSelect]);
 
   return (
     <div className="app-container">
