@@ -88,7 +88,7 @@ const App = () => {
   }, [viewer, images, selectedImage, handleImageSelect]);
 
   const handleImageSelect = React.useCallback((image) => {
-    console.log('Handling image select:', image);
+    console.log('Handling image selection:', image);
     setSelectedImage(image);
     if (viewer) {
       console.log('Viewer exists, attempting to open image');
