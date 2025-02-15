@@ -3,5 +3,10 @@
     "configLevel": "project",
     "useProfile": true,
     "profileName": "amplify_wbsorg"
+  },
+  "prod": {
+    "configLevel": "project",
+    "useProfile": true,
+    "profileName": "amplify_wbsorg"
   }
 }

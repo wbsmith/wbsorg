@@ -1,0 +1,23 @@
+{
+  "prod": {
+    "awscloudformation": {
+      "AuthRoleName": "amplify-wbsorg-prod-9ed12-authRole",
+      "UnauthRoleArn": "arn:aws:iam::213117946893:role/amplify-wbsorg-prod-9ed12-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::213117946893:role/amplify-wbsorg-prod-9ed12-authRole",
+      "Region": "us-west-1",
+      "DeploymentBucketName": "amplify-wbsorg-prod-9ed12-deployment",
+      "UnauthRoleName": "amplify-wbsorg-prod-9ed12-unauthRole",
+      "StackName": "amplify-wbsorg-prod-9ed12",
+      "StackId": "arn:aws:cloudformation:us-west-1:213117946893:stack/amplify-wbsorg-prod-9ed12/f5dcff30-ebd4-11ef-a7b4-0670423d468d",
+      "AmplifyAppId": "d3nafiu5skkzvb"
+    },
+    "categories": {
+      "auth": {
+        "AmplifyCLIAuth": {}
+      },
+      "storage": {
+        "aclirec": {}
+      }
+    }
+  }
+}

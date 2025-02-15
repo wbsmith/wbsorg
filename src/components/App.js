@@ -1,5 +1,6 @@
 import React from 'react';
 import OpenSeadragon from 'openseadragon';
+import { Storage } from 'aws-amplify';
 import Filmstrip from './Filmstrip';
 
 const App = () => {
@@ -8,36 +9,41 @@ const App = () => {
   const [viewer, setViewer] = React.useState(null);
   const [isLoading, setIsLoading] = React.useState(true);
 
+  // Get pre-signed URL using Amplify Storage
+  const getPreSignedUrl = async (key) => {
+    try {
+      return await Storage.get(key, { expires: 3600 });
+    } catch (error) {
+      console.error('Error generating signed URL:', error);
+      throw error;
+    }
+  };
+
   React.useEffect(() => {
     const fetchImages = async () => {
       try {
-        const bucketUrl = 'https://s3.us-west-1.amazonaws.com/wbryansmith.org';
-        const response = await fetch(`${bucketUrl}?list-type=2&prefix=full_imgs/`);
-        const data = await response.text();
-        const parser = new DOMParser();
-        const xmlDoc = parser.parseFromString(data, "text/xml");
-        const contents = xmlDoc.getElementsByTagName("Contents");
+        // List objects in the bucket using Amplify Storage
+        const response = await Storage.list('full_imgs/');
         
-        const imageList = Array.from(contents)
-        .map(item => {
-          const key = item.getElementsByTagName("Key")[0].textContent;
-          if (key.match(/\.(jpg|jpeg|png)$/i)) {
-            const filename = key.split('/').pop();
-            return {
-              id: filename,
-              url: `${bucketUrl}/${key}`,
-              title: filename,
-              thumbnail: `${bucketUrl}/thumbnails/${filename}`
-            };
-          }
-          return null;
-        })
-        .filter(item => item !== null);
+        const imageList = await Promise.all(
+          response
+            .filter(item => item.key.match(/\.(jpg|jpeg|png)$/i))
+            .map(async item => {
+              const filename = item.key.split('/').pop();
+              const fullImageUrl = await getPreSignedUrl(item.key);
+              const thumbnailUrl = await getPreSignedUrl(`thumbnails/${filename}`);
+              
+              return {
+                id: filename,
+                url: fullImageUrl,
+                title: filename,
+                thumbnail: thumbnailUrl,
+                key: item.key
+              };
+            })
+        );
 
         setImages(imageList);
-        // if (imageList.length > 0) {
-        //   handleImageSelect(imageList[0]);
-        // }
       } catch (error) {
         console.error('Error fetching images:', error);
       } finally {
@@ -80,18 +86,54 @@ const App = () => {
     };
   }, []);
 
-  // Add a new useEffect to handle initial image selection
+  // URL regeneration logic
+  React.useEffect(() => {
+    const regenerateUrls = async () => {
+      if (images.length === 0) return;
+
+      try {
+        const updatedImages = await Promise.all(
+          images.map(async (image) => ({
+            ...image,
+            url: await getPreSignedUrl(image.key),
+            thumbnail: await getPreSignedUrl(`thumbnails/${image.id}`)
+          }))
+        );
+        setImages(updatedImages);
+        
+        if (selectedImage) {
+          const updatedUrl = await getPreSignedUrl(selectedImage.key);
+          setSelectedImage(prev => ({ ...prev, url: updatedUrl }));
+          
+          if (viewer) {
+            viewer.open({
+              type: 'image',
+              url: updatedUrl,
+              crossOriginPolicy: 'Anonymous',
+              buildPyramid: false,
+              immediateRender: true
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error regenerating URLs:', error);
+      }
+    };
+
+    const interval = setInterval(regenerateUrls, 50 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [images, selectedImage, viewer]);
+
+  // Initial image selection
   React.useEffect(() => {
     if (viewer && images.length > 0 && !selectedImage) {
       handleImageSelect(images[0]);
     }
-  }, [viewer, images, selectedImage, handleImageSelect]);
+  }, [viewer, images, selectedImage]);
 
   const handleImageSelect = React.useCallback((image) => {
-    console.log('Handling image selection:', image);
     setSelectedImage(image);
     if (viewer) {
-      console.log('Viewer exists, attempting to open image');
       viewer.open({
         type: 'image',
         url: image.url,
@@ -105,8 +147,6 @@ const App = () => {
           console.error('Error loading image:', err);
         }
       });
-    } else {
-      console.log('Viewer not initialized yet');
     }
   }, [viewer]);
 

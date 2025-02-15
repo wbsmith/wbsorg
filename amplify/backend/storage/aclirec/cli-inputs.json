@@ -1,0 +1,14 @@
+{
+  "resourceName": "aclirec",
+  "policyUUID": "73e4f53d",
+  "bucketName": "wbsorg28bd39b6dc1c49dfb86c5df9e0757e4c",
+  "storageAccess": "authAndGuest",
+  "guestAccess": [
+    "READ"
+  ],
+  "authAccess": [
+    "READ"
+  ],
+  "triggerFunction": "NONE",
+  "groupAccess": {}
+}
