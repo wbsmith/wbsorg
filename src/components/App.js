@@ -14,6 +14,25 @@ const App = () => {
   const [viewer, setViewer] = React.useState(null);
   const [isLoading, setIsLoading] = React.useState(true);
 
+  const handleImageSelect = React.useCallback((image) => {
+    setSelectedImage(image);
+    if (viewer) {
+      viewer.open({
+        type: 'image',
+        url: image.url,
+        crossOriginPolicy: 'Anonymous',
+        buildPyramid: false,
+        immediateRender: true,
+        success: function() {
+          console.log('Image loaded successfully');
+        },
+        error: function(err) {
+          console.error('Error loading image:', err);
+        }
+      });
+    }
+  }, [viewer]);
+
   // Get pre-signed URL using Amplify Storage
   const getPreSignedUrl = async (key) => {
     try {
@@ -64,7 +83,6 @@ const App = () => {
 
     fetchImages();
 
-    // [Rest of your OpenSeadragon initialization remains the same...]
     const viewer = OpenSeadragon({
       id: 'openseadragon-viewer',
       prefixUrl: 'https://cdn.jsdelivr.net/npm/openseadragon@3.1/build/openseadragon/images/',
@@ -97,7 +115,50 @@ const App = () => {
     };
   }, []);
 
-  // [Rest of your component code remains the same...]
+  // Initial image selection
+  React.useEffect(() => {
+    if (viewer && images.length > 0 && !selectedImage) {
+      handleImageSelect(images[0]);
+    }
+  }, [viewer, images, selectedImage, handleImageSelect]);
+
+  // URL regeneration logic
+  React.useEffect(() => {
+    const regenerateUrls = async () => {
+      if (images.length === 0) return;
+
+      try {
+        const updatedImages = await Promise.all(
+          images.map(async (image) => ({
+            ...image,
+            url: await getPreSignedUrl(image.key),
+            thumbnail: await getPreSignedUrl(`thumbnails/${image.id}`)
+          }))
+        );
+        setImages(updatedImages);
+        
+        if (selectedImage) {
+          const updatedUrl = await getPreSignedUrl(selectedImage.key);
+          setSelectedImage(prev => ({ ...prev, url: updatedUrl }));
+          
+          if (viewer) {
+            viewer.open({
+              type: 'image',
+              url: updatedUrl,
+              crossOriginPolicy: 'Anonymous',
+              buildPyramid: false,
+              immediateRender: true
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error regenerating URLs:', error);
+      }
+    };
+
+    const interval = setInterval(regenerateUrls, 50 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [images, selectedImage, viewer]);
 
   return (
     <div className="app-container">
