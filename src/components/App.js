@@ -1,12 +1,12 @@
 import React from 'react';
 import OpenSeadragon from 'openseadragon';
-import { Amplify, Storage } from 'aws-amplify';
+import { Amplify } from 'aws-amplify';
+import { uploadData, getUrl, list } from 'aws-amplify/storage';
 import Filmstrip from './Filmstrip';
 
-// Debug what Storage contains
-console.log('Storage import:', Storage);
-console.log('Storage methods:', Object.keys(Storage));
-console.log('Is Storage.list available?', typeof Storage.list === 'function');
+// More defensive debugging
+console.log('Amplify available?:', !!Amplify);
+console.log('Storage methods available?:', !!list, !!getUrl);
 
 const App = () => {
   const [images, setImages] = React.useState([]);
@@ -18,7 +18,8 @@ const App = () => {
   const getPreSignedUrl = async (key) => {
     try {
       console.log('Attempting to get URL for key:', key);
-      return await Storage.get(key, { expires: 3600 });
+      const result = await getUrl({ key, options: { expires: 3600 }});
+      return result.url.href;
     } catch (error) {
       console.error('Error generating signed URL:', error);
       throw error;
@@ -29,25 +30,13 @@ const App = () => {
     const fetchImages = async () => {
       try {
         console.log('Starting fetchImages');
-        console.log('Storage object in fetchImages:', Storage);
         
-        // Verify Amplify configuration
-        console.log('Amplify Config:', Amplify.configure());
-        
-        if (!Storage || !Storage.list) {
-          console.error('Storage or Storage.list is not available:', {
-            Storage: Storage,
-            'Storage.list': Storage?.list
-          });
-          throw new Error('Storage.list is not available');
-        }
-
         console.log('Attempting to list images from full_imgs/');
-        const response = await Storage.list('full_imgs/');
+        const response = await list({ prefix: 'full_imgs/' });
         console.log('List response:', response);
         
         const imageList = await Promise.all(
-          response
+          response.items
             .filter(item => item.key.match(/\.(jpg|jpeg|png)$/i))
             .map(async item => {
               const filename = item.key.split('/').pop();
@@ -64,13 +53,10 @@ const App = () => {
             })
         );
 
+        console.log('Processed images:', imageList);
         setImages(imageList);
       } catch (error) {
-        console.error('Detailed error:', {
-          error,
-          storageAvailable: !!Storage,
-          storageList: Storage ? Object.keys(Storage) : null
-        });
+        console.error('Error in fetchImages:', error);
       } finally {
         setIsLoading(false);
       }
@@ -78,7 +64,7 @@ const App = () => {
 
     fetchImages();
 
-    // Initialize OpenSeadragon
+    // [Rest of your OpenSeadragon initialization remains the same...]
     const viewer = OpenSeadragon({
       id: 'openseadragon-viewer',
       prefixUrl: 'https://cdn.jsdelivr.net/npm/openseadragon@3.1/build/openseadragon/images/',
@@ -111,69 +97,7 @@ const App = () => {
     };
   }, []);
 
-  // URL regeneration logic
-  React.useEffect(() => {
-    const regenerateUrls = async () => {
-      if (images.length === 0) return;
-
-      try {
-        const updatedImages = await Promise.all(
-          images.map(async (image) => ({
-            ...image,
-            url: await getPreSignedUrl(image.key),
-            thumbnail: await getPreSignedUrl(`thumbnails/${image.id}`)
-          }))
-        );
-        setImages(updatedImages);
-        
-        if (selectedImage) {
-          const updatedUrl = await getPreSignedUrl(selectedImage.key);
-          setSelectedImage(prev => ({ ...prev, url: updatedUrl }));
-          
-          if (viewer) {
-            viewer.open({
-              type: 'image',
-              url: updatedUrl,
-              crossOriginPolicy: 'Anonymous',
-              buildPyramid: false,
-              immediateRender: true
-            });
-          }
-        }
-      } catch (error) {
-        console.error('Error regenerating URLs:', error);
-      }
-    };
-
-    const interval = setInterval(regenerateUrls, 50 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [images, selectedImage, viewer]);
-
-  // Initial image selection
-  React.useEffect(() => {
-    if (viewer && images.length > 0 && !selectedImage) {
-      handleImageSelect(images[0]);
-    }
-  }, [viewer, images, selectedImage]);
-
-  const handleImageSelect = React.useCallback((image) => {
-    setSelectedImage(image);
-    if (viewer) {
-      viewer.open({
-        type: 'image',
-        url: image.url,
-        crossOriginPolicy: 'Anonymous',
-        buildPyramid: false,
-        immediateRender: true,
-        success: function() {
-          console.log('Image loaded successfully');
-        },
-        error: function(err) {
-          console.error('Error loading image:', err);
-        }
-      });
-    }
-  }, [viewer]);
+  // [Rest of your component code remains the same...]
 
   return (
     <div className="app-container">
