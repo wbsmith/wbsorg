@@ -47,7 +47,7 @@
         "s3TemplateURL": "https://s3.amazonaws.com/amplify-wbsorg-prod-9ed12-deployment/amplify-cfn-templates/auth/AmplifyCLIAuth-cloudformation-template.json",
         "logicalId": "authAmplifyCLIAuth"
       },
-      "lastPushTimeStamp": "2025-02-15T20:02:49.389Z",
+      "lastPushTimeStamp": "2025-02-15T21:29:32.219Z",
       "output": {
         "UserPoolId": "us-west-1_Rmss2wefo",
         "AppClientIDWeb": "1k5dtit8m15afh234f6d97qo6q",
@@ -65,7 +65,7 @@
       "service": "S3",
       "providerPlugin": "awscloudformation",
       "dependsOn": [],
-      "lastPushTimeStamp": "2025-02-15T20:02:49.389Z",
+      "lastPushTimeStamp": "2025-02-15T21:29:32.513Z",
       "providerMetadata": {
         "s3TemplateURL": "https://s3.amazonaws.com/amplify-wbsorg-prod-9ed12-deployment/amplify-cfn-templates/storage/cloudformation-template.json",
         "logicalId": "storageaclirec"
