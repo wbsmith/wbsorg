@@ -1,0 +1,15 @@
+{
+  "providers": {
+    "awscloudformation": {
+      "AuthRoleName": "amplify-wbsorg-dev-aa06a-authRole",
+      "UnauthRoleArn": "arn:aws:iam::213117946893:role/amplify-wbsorg-dev-aa06a-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::213117946893:role/amplify-wbsorg-dev-aa06a-authRole",
+      "Region": "us-west-1",
+      "DeploymentBucketName": "amplify-wbsorg-dev-aa06a-deployment",
+      "UnauthRoleName": "amplify-wbsorg-dev-aa06a-unauthRole",
+      "StackName": "amplify-wbsorg-dev-aa06a",
+      "StackId": "arn:aws:cloudformation:us-west-1:213117946893:stack/amplify-wbsorg-dev-aa06a/f51bab70-eb5a-11ef-a6af-0215b8bcf891",
+      "AmplifyAppId": "dby2jmh0lywmf"
+    }
+  }
+}
