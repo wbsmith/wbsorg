@@ -1,7 +1,12 @@
 import React from 'react';
 import OpenSeadragon from 'openseadragon';
-import { Storage } from 'aws-amplify';
+import { Amplify, Storage } from 'aws-amplify';
 import Filmstrip from './Filmstrip';
+
+// Debug what Storage contains
+console.log('Storage import:', Storage);
+console.log('Storage methods:', Object.keys(Storage));
+console.log('Is Storage.list available?', typeof Storage.list === 'function');
 
 const App = () => {
   const [images, setImages] = React.useState([]);
@@ -12,6 +17,7 @@ const App = () => {
   // Get pre-signed URL using Amplify Storage
   const getPreSignedUrl = async (key) => {
     try {
+      console.log('Attempting to get URL for key:', key);
       return await Storage.get(key, { expires: 3600 });
     } catch (error) {
       console.error('Error generating signed URL:', error);
@@ -22,8 +28,23 @@ const App = () => {
   React.useEffect(() => {
     const fetchImages = async () => {
       try {
-        // List objects in the bucket using Amplify Storage
+        console.log('Starting fetchImages');
+        console.log('Storage object in fetchImages:', Storage);
+        
+        // Verify Amplify configuration
+        console.log('Amplify Config:', Amplify.configure());
+        
+        if (!Storage || !Storage.list) {
+          console.error('Storage or Storage.list is not available:', {
+            Storage: Storage,
+            'Storage.list': Storage?.list
+          });
+          throw new Error('Storage.list is not available');
+        }
+
+        console.log('Attempting to list images from full_imgs/');
         const response = await Storage.list('full_imgs/');
+        console.log('List response:', response);
         
         const imageList = await Promise.all(
           response
@@ -45,7 +66,11 @@ const App = () => {
 
         setImages(imageList);
       } catch (error) {
-        console.error('Error fetching images:', error);
+        console.error('Detailed error:', {
+          error,
+          storageAvailable: !!Storage,
+          storageList: Storage ? Object.keys(Storage) : null
+        });
       } finally {
         setIsLoading(false);
       }
