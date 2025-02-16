@@ -4,41 +4,16 @@ import { Amplify } from 'aws-amplify';
 import { uploadData, getUrl, list } from 'aws-amplify/storage';
 import Filmstrip from './Filmstrip';
 
-// Working Version using Amplify Auth
-
-// More defensive debugging
-console.log('Amplify available?:', !!Amplify);
-console.log('Storage methods available?:', !!list, !!getUrl);
-
 const App = () => {
   const [images, setImages] = React.useState([]);
   const [selectedImage, setSelectedImage] = React.useState(null);
   const [viewer, setViewer] = React.useState(null);
   const [isLoading, setIsLoading] = React.useState(true);
-
-  const handleImageSelect = React.useCallback((image) => {
-    setSelectedImage(image);
-    if (viewer) {
-      viewer.open({
-        type: 'image',
-        url: image.url,
-        crossOriginPolicy: 'Anonymous',
-        buildPyramid: false,
-        immediateRender: true,
-        success: function() {
-          console.log('Image loaded successfully');
-        },
-        error: function(err) {
-          console.error('Error loading image:', err);
-        }
-      });
-    }
-  }, [viewer]);
+  const [isRefreshing, setIsRefreshing] = React.useState(false);
 
   // Get pre-signed URL using Amplify Storage
   const getPreSignedUrl = async (key) => {
     try {
-      console.log('Attempting to get URL for key:', key);
       const result = await getUrl({ key, options: { expires: 3600 }});
       return result.url.href;
     } catch (error) {
@@ -47,14 +22,58 @@ const App = () => {
     }
   };
 
+  // Refresh URLs for all images
+  const refreshUrls = async () => {
+    if (isRefreshing) return; // Prevent multiple simultaneous refreshes
+    
+    setIsRefreshing(true);
+    try {
+      const updatedImages = await Promise.all(
+        images.map(async (image) => ({
+          ...image,
+          url: await getPreSignedUrl(image.key),
+          thumbnail: await getPreSignedUrl(`thumbnails/${image.id}`)
+        }))
+      );
+      setImages(updatedImages);
+      
+      // If there's a selected image, update its URL and refresh the viewer
+      if (selectedImage) {
+        const newUrl = await getPreSignedUrl(selectedImage.key);
+        setSelectedImage(prev => ({ ...prev, url: newUrl }));
+        
+        if (viewer) {
+          viewer.open({
+            type: 'image',
+            url: newUrl,
+            crossOriginPolicy: 'Anonymous',
+            buildPyramid: false,
+            immediateRender: true
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error refreshing URLs:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // Handle image loading errors
+  const handleImageError = async () => {
+    if (!isRefreshing) {
+      console.log('Image load failed, attempting to refresh URLs');
+      await refreshUrls();
+    }
+  };
+
   React.useEffect(() => {
     const fetchImages = async () => {
       try {
-        console.log('Starting fetchImages');
-        
-        console.log('Attempting to list images from full_imgs/');
-        const response = await list({ prefix: 'full_imgs/' });
-        console.log('List response:', response);
+        const response = await list({ 
+          prefix: 'public/full_imgs/',
+          options: { accessLevel: 'guest' }
+        });
         
         const imageList = await Promise.all(
           response.items
@@ -74,7 +93,6 @@ const App = () => {
             })
         );
 
-        console.log('Processed images:', imageList);
         setImages(imageList);
       } catch (error) {
         console.error('Error in fetchImages:', error);
@@ -85,6 +103,7 @@ const App = () => {
 
     fetchImages();
 
+    // Initialize OpenSeadragon with error handling
     const viewer = OpenSeadragon({
       id: 'openseadragon-viewer',
       prefixUrl: 'https://cdn.jsdelivr.net/npm/openseadragon@3.1/build/openseadragon/images/',
@@ -103,12 +122,17 @@ const App = () => {
         clickToZoom: false,
         dblClickToZoom: true,
         pinchToZoom: true
-      }
+      },
+      // Suppress token display and handle errors
+      onerror: handleImageError,
+      showReferenceStrip: false,
+      showNavigator: false,
+      // Disable default error messages
+      showNavigationControl: false
     });
     
-    viewer.addHandler('open', function() {
-      console.log('Viewer is ready and image is loaded');
-    });
+    viewer.addHandler('open-failed', handleImageError);
+    viewer.addHandler('tile-load-failed', handleImageError);
     
     setViewer(viewer);
 
@@ -117,55 +141,32 @@ const App = () => {
     };
   }, []);
 
-  // Initial image selection
-  React.useEffect(() => {
-    if (viewer && images.length > 0 && !selectedImage) {
-      handleImageSelect(images[0]);
-    }
-  }, [viewer, images, selectedImage, handleImageSelect]);
-
-  // URL regeneration logic
-  React.useEffect(() => {
-    const regenerateUrls = async () => {
-      if (images.length === 0) return;
-
+  const handleImageSelect = React.useCallback(async (image) => {
+    setSelectedImage(image);
+    if (viewer) {
       try {
-        const updatedImages = await Promise.all(
-          images.map(async (image) => ({
-            ...image,
-            url: await getPreSignedUrl(image.key),
-            thumbnail: await getPreSignedUrl(`thumbnails/${image.id}`)
-          }))
-        );
-        setImages(updatedImages);
-        
-        if (selectedImage) {
-          const updatedUrl = await getPreSignedUrl(selectedImage.key);
-          setSelectedImage(prev => ({ ...prev, url: updatedUrl }));
-          
-          if (viewer) {
-            viewer.open({
-              type: 'image',
-              url: updatedUrl,
-              crossOriginPolicy: 'Anonymous',
-              buildPyramid: false,
-              immediateRender: true
-            });
-          }
-        }
+        viewer.open({
+          type: 'image',
+          url: image.url,
+          crossOriginPolicy: 'Anonymous',
+          buildPyramid: false,
+          immediateRender: true,
+          success: function() {
+            console.log('Image loaded successfully');
+          },
+          error: handleImageError
+        });
       } catch (error) {
-        console.error('Error regenerating URLs:', error);
+        console.error('Error loading image:', error);
+        await handleImageError();
       }
-    };
-
-    const interval = setInterval(regenerateUrls, 50 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [images, selectedImage, viewer]);
+    }
+  }, [viewer, handleImageError]);
 
   return (
     <div className="app-container">
       <header>
-        <h1>Full Image Gallery</h1>
+        <h1>Photo Gallery</h1>
       </header>
       
       <main>
