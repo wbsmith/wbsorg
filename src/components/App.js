@@ -1,7 +1,7 @@
 import React from 'react';
 import OpenSeadragon from 'openseadragon';
 import { Amplify } from 'aws-amplify';
-import { uploadData, getUrl, list } from 'aws-amplify/storage';
+import { getUrl, list } from 'aws-amplify/storage';
 import Filmstrip from './Filmstrip';
 
 const App = () => {
@@ -24,7 +24,7 @@ const App = () => {
 
   // Refresh URLs for all images
   const refreshUrls = async () => {
-    if (isRefreshing) return; // Prevent multiple simultaneous refreshes
+    if (isRefreshing) return;
     
     setIsRefreshing(true);
     try {
@@ -37,7 +37,6 @@ const App = () => {
       );
       setImages(updatedImages);
       
-      // If there's a selected image, update its URL and refresh the viewer
       if (selectedImage) {
         const newUrl = await getPreSignedUrl(selectedImage.key);
         setSelectedImage(prev => ({ ...prev, url: newUrl }));
@@ -70,10 +69,15 @@ const App = () => {
   React.useEffect(() => {
     const fetchImages = async () => {
       try {
+        console.log('Starting fetchImages');
         const response = await list({ 
-          prefix: 'public/full_imgs/',
-          options: { accessLevel: 'guest' }
+          prefix: 'full_imgs/',
+          options: { 
+            accessLevel: 'guest'
+          }
         });
+        
+        console.log('List response:', response);
         
         const imageList = await Promise.all(
           response.items
@@ -93,6 +97,7 @@ const App = () => {
             })
         );
 
+        console.log('Processed images:', imageList);
         setImages(imageList);
       } catch (error) {
         console.error('Error in fetchImages:', error);
@@ -103,7 +108,7 @@ const App = () => {
 
     fetchImages();
 
-    // Initialize OpenSeadragon with error handling
+    // Initialize OpenSeadragon
     const viewer = OpenSeadragon({
       id: 'openseadragon-viewer',
       prefixUrl: 'https://cdn.jsdelivr.net/npm/openseadragon@3.1/build/openseadragon/images/',
@@ -123,14 +128,16 @@ const App = () => {
         dblClickToZoom: true,
         pinchToZoom: true
       },
-      // Suppress token display and handle errors
-      onerror: handleImageError,
-      showReferenceStrip: false,
       showNavigator: false,
-      // Disable default error messages
-      showNavigationControl: false
+      showReferenceStrip: false,
+      defaultZoomLevel: 0,
+      preserveZoom: true
     });
     
+    viewer.addHandler('open', function() {
+      console.log('Viewer is ready and image is loaded');
+    });
+
     viewer.addHandler('open-failed', handleImageError);
     viewer.addHandler('tile-load-failed', handleImageError);
     
@@ -141,27 +148,25 @@ const App = () => {
     };
   }, []);
 
-  const handleImageSelect = React.useCallback(async (image) => {
+  const handleImageSelect = React.useCallback((image) => {
     setSelectedImage(image);
     if (viewer) {
-      try {
-        viewer.open({
-          type: 'image',
-          url: image.url,
-          crossOriginPolicy: 'Anonymous',
-          buildPyramid: false,
-          immediateRender: true,
-          success: function() {
-            console.log('Image loaded successfully');
-          },
-          error: handleImageError
-        });
-      } catch (error) {
-        console.error('Error loading image:', error);
-        await handleImageError();
-      }
+      viewer.open({
+        type: 'image',
+        url: image.url,
+        crossOriginPolicy: 'Anonymous',
+        buildPyramid: false,
+        immediateRender: true,
+        success: function() {
+          console.log('Image loaded successfully');
+        },
+        error: async function(err) {
+          console.error('Error loading image:', err);
+          await handleImageError();
+        }
+      });
     }
-  }, [viewer, handleImageError]);
+  }, [viewer]);
 
   return (
     <div className="app-container">
