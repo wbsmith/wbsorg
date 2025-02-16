@@ -2,6 +2,7 @@ import React from 'react';
 
 const Filmstrip = ({ images, selectedImage, onImageSelect }) => {
   const scrollRef = React.useRef(null);
+  const keyPressRef = React.useRef(null);
 
   const handleScroll = (direction) => {
     if (scrollRef.current) {
@@ -10,37 +11,15 @@ const Filmstrip = ({ images, selectedImage, onImageSelect }) => {
     }
   };
 
-  // Ensure thumbnail is visible in viewport
-  const ensureVisible = (element) => {
-    if (!element || !scrollRef.current) return;
-
-    const container = scrollRef.current;
-    const containerLeft = container.scrollLeft;
-    const containerRight = containerLeft + container.clientWidth;
-
-    const elementLeft = element.offsetLeft;
-    const elementRight = elementLeft + element.offsetWidth;
-
-    // If element is to the left of the visible area
-    if (elementLeft < containerLeft) {
-      container.scrollTo({
-        left: elementLeft - 20, // Add some padding
-        behavior: 'smooth'
-      });
-    }
-    // If element is to the right of the visible area
-    else if (elementRight > containerRight) {
-      container.scrollTo({
-        left: elementRight - container.clientWidth + 20, // Add some padding
-        behavior: 'smooth'
-      });
-    }
-  };
-
-  // Handle keyboard navigation
+  // Handle keyboard navigation with debouncing
   React.useEffect(() => {
-    const handleKeyPress = (e) => {
-      if (!images.length) return;
+    const handleKeyDown = (e) => {
+      // Prevent default scrolling behavior
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        e.preventDefault();
+      }
+
+      if (!images.length || keyPressRef.current === e.key) return;
 
       const currentIndex = images.findIndex(img => img.id === selectedImage?.id);
       let newIndex = currentIndex;
@@ -57,27 +36,46 @@ const Filmstrip = ({ images, selectedImage, onImageSelect }) => {
       }
 
       if (newIndex !== currentIndex) {
+        keyPressRef.current = e.key;
         onImageSelect(images[newIndex]);
         
-        // Use requestAnimationFrame to ensure the DOM has updated
-        requestAnimationFrame(() => {
-          const thumbnailElement = scrollRef.current?.querySelector(`[data-image-id="${images[newIndex].id}"]`);
-          ensureVisible(thumbnailElement);
-        });
+        const thumbnailElement = scrollRef.current?.querySelector(`[data-image-id="${images[newIndex].id}"]`);
+        if (thumbnailElement && scrollRef.current) {
+          const container = scrollRef.current;
+          const containerWidth = container.clientWidth;
+          const elementOffset = thumbnailElement.offsetLeft;
+          const elementWidth = thumbnailElement.offsetWidth;
+          
+          // Calculate the target scroll position
+          let scrollPosition;
+          if (e.key === 'ArrowRight') {
+            scrollPosition = elementOffset - (containerWidth - elementWidth) / 2;
+          } else {
+            scrollPosition = elementOffset - containerWidth / 3;
+          }
+          
+          container.scrollTo({
+            left: scrollPosition,
+            behavior: 'smooth'
+          });
+        }
       }
     };
 
-    window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [images, selectedImage, onImageSelect]);
+    const handleKeyUp = (e) => {
+      if (e.key === keyPressRef.current) {
+        keyPressRef.current = null;
+      }
+    };
 
-  // Keep selected image visible when it changes
-  React.useEffect(() => {
-    if (selectedImage) {
-      const thumbnailElement = scrollRef.current?.querySelector(`[data-image-id="${selectedImage.id}"]`);
-      ensureVisible(thumbnailElement);
-    }
-  }, [selectedImage]);
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [images, selectedImage, onImageSelect]);
 
   return (
     <div className="filmstrip-container">

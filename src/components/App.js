@@ -165,7 +165,7 @@ const App = () => {
   return (
     <div className="app-container">
       <header>
-        <h1>Photo Gallery</h1>
+        <h1>Full Image Gallery</h1>
       </header>
       
       <main>
