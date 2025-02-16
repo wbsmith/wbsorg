@@ -4,6 +4,8 @@ import { Amplify } from 'aws-amplify';
 import { uploadData, getUrl, list } from 'aws-amplify/storage';
 import Filmstrip from './Filmstrip';
 
+// Working Version using Amplify Auth
+
 // More defensive debugging
 console.log('Amplify available?:', !!Amplify);
 console.log('Storage methods available?:', !!list, !!getUrl);
