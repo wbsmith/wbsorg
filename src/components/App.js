@@ -16,29 +16,6 @@ const App = () => {
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const filmstripRef = React.useRef(null);
 
-  const handleImageSelect = React.useCallback((image) => {
-    setSelectedImage(image);
-    if (viewer) {
-      viewer.open({
-        type: 'image',
-        url: image.url,
-        crossOriginPolicy: 'Anonymous',
-        buildPyramid: false,
-        immediateRender: true,
-        success: function() {
-          console.log('Image loaded successfully');
-        },
-        error: async function(err) {
-          console.error('Error loading image:', err);
-          // Try to refresh URLs if image fails to load
-          if (!isRefreshing) {
-            await refreshUrls();
-          }
-        }
-      });
-    }
-  }, [viewer, isRefreshing]);
-
   // Get pre-signed URL using Amplify Storage
   const getPreSignedUrl = async (key) => {
     try {
@@ -51,7 +28,7 @@ const App = () => {
     }
   };
 
-  // Add refresh URLs function
+  // Refresh URLs function
   const refreshUrls = async () => {
     if (isRefreshing) return;
     setIsRefreshing(true);
@@ -69,7 +46,6 @@ const App = () => {
       );
       setImages(updatedImages);
       
-      // Update selected image if there is one
       if (selectedImage) {
         const newUrl = await getPreSignedUrl(selectedImage.key);
         const updatedSelected = { ...selectedImage, url: newUrl };
@@ -96,6 +72,50 @@ const App = () => {
       setIsRefreshing(false);
     }
   };
+
+  // Handle image selection with improved error handling
+  const handleImageSelect = React.useCallback((image) => {
+    setSelectedImage(image);
+    if (viewer) {
+      const openImage = async () => {
+        try {
+          await viewer.open({
+            type: 'image',
+            url: image.url,
+            crossOriginPolicy: 'Anonymous',
+            buildPyramid: false,
+            immediateRender: true,
+            success: function() {
+              console.log('Image loaded successfully');
+            },
+            error: async function(err) {
+              console.error('Error loading image:', err);
+              if (!isRefreshing) {
+                await refreshUrls();
+                // Try loading the image again after refresh
+                const updatedImage = images.find(img => img.id === image.id);
+                if (updatedImage) {
+                  viewer.open({
+                    type: 'image',
+                    url: updatedImage.url,
+                    crossOriginPolicy: 'Anonymous',
+                    buildPyramid: false,
+                    immediateRender: true
+                  });
+                }
+              }
+            }
+          });
+        } catch (error) {
+          console.error('Error in openImage:', error);
+          if (!isRefreshing) {
+            await refreshUrls();
+          }
+        }
+      };
+      openImage();
+    }
+  }, [viewer, isRefreshing, images]);
 
   React.useEffect(() => {
     const fetchImages = async () => {
@@ -154,20 +174,42 @@ const App = () => {
         dblClickToZoom: true,
         pinchToZoom: true
       },
-      showNavigator: false,  // Suppress default UI elements
-      showReferenceStrip: false,  // Suppress default UI elements
+      showNavigator: false,
+      showReferenceStrip: false,
       defaultZoomLevel: 0,
-      preserveZoom: true
+      preserveZoom: true,
+      failIfMaxZoomPixelRatioExceeded: false,
+      placeholderFillStyle: '#000',
+      timeout: 120000
+    });
+    
+    // Add comprehensive error handling
+    viewer.addHandler('tile-load-failed', async function(event) {
+      console.log('Tile load failed, attempting refresh');
+      event.preventDefault();
+      if (!isRefreshing) {
+        await refreshUrls();
+      }
+    });
+
+    viewer.addHandler('open-failed', async function(event) {
+      console.log('Open failed, attempting refresh');
+      event.preventDefault();
+      if (!isRefreshing) {
+        await refreshUrls();
+      }
+    });
+
+    viewer.addHandler('error', async function(event) {
+      console.log('Viewer error, attempting refresh');
+      event.preventDefault();
+      if (!isRefreshing) {
+        await refreshUrls();
+      }
     });
     
     viewer.addHandler('open', function() {
       console.log('Viewer is ready and image is loaded');
-    });
-    
-    viewer.addHandler('open-failed', async function() {
-      if (!isRefreshing) {
-        await refreshUrls();
-      }
     });
     
     setViewer(viewer);
