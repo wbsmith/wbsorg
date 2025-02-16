@@ -10,6 +10,33 @@ const Filmstrip = ({ images, selectedImage, onImageSelect }) => {
     }
   };
 
+  // Ensure thumbnail is visible in viewport
+  const ensureVisible = (element) => {
+    if (!element || !scrollRef.current) return;
+
+    const container = scrollRef.current;
+    const containerLeft = container.scrollLeft;
+    const containerRight = containerLeft + container.clientWidth;
+
+    const elementLeft = element.offsetLeft;
+    const elementRight = elementLeft + element.offsetWidth;
+
+    // If element is to the left of the visible area
+    if (elementLeft < containerLeft) {
+      container.scrollTo({
+        left: elementLeft - 20, // Add some padding
+        behavior: 'smooth'
+      });
+    }
+    // If element is to the right of the visible area
+    else if (elementRight > containerRight) {
+      container.scrollTo({
+        left: elementRight - container.clientWidth + 20, // Add some padding
+        behavior: 'smooth'
+      });
+    }
+  };
+
   // Handle keyboard navigation
   React.useEffect(() => {
     const handleKeyPress = (e) => {
@@ -32,32 +59,25 @@ const Filmstrip = ({ images, selectedImage, onImageSelect }) => {
       if (newIndex !== currentIndex) {
         onImageSelect(images[newIndex]);
         
-        // Scroll the thumbnail into view if needed
-        const thumbnailElement = scrollRef.current?.querySelector(`[data-image-id="${images[newIndex].id}"]`);
-        if (thumbnailElement) {
-          const scrollContainer = scrollRef.current;
-          const elementLeft = thumbnailElement.offsetLeft;
-          const elementWidth = thumbnailElement.offsetWidth;
-          const containerWidth = scrollContainer.offsetWidth;
-          const containerScroll = scrollContainer.scrollLeft;
-
-          // Check if the element is not fully visible
-          if (elementLeft < containerScroll || 
-              elementLeft + elementWidth > containerScroll + containerWidth) {
-            // Calculate position to center the element
-            const scrollPosition = elementLeft - (containerWidth - elementWidth) / 2;
-            scrollContainer.scrollTo({
-              left: scrollPosition,
-              behavior: 'smooth'
-            });
-          }
-        }
+        // Use requestAnimationFrame to ensure the DOM has updated
+        requestAnimationFrame(() => {
+          const thumbnailElement = scrollRef.current?.querySelector(`[data-image-id="${images[newIndex].id}"]`);
+          ensureVisible(thumbnailElement);
+        });
       }
     };
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [images, selectedImage, onImageSelect]);
+
+  // Keep selected image visible when it changes
+  React.useEffect(() => {
+    if (selectedImage) {
+      const thumbnailElement = scrollRef.current?.querySelector(`[data-image-id="${selectedImage.id}"]`);
+      ensureVisible(thumbnailElement);
+    }
+  }, [selectedImage]);
 
   return (
     <div className="filmstrip-container">
