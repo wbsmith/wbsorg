@@ -20,7 +20,7 @@ const App = () => {
   const getPreSignedUrl = async (key) => {
     try {
       console.log('Attempting to get URL for key:', key);
-      const result = await getUrl({ key, options: { expires: 3600 }});
+      const result = await getUrl({ key, options: { expires: 120 }});
       return result.url.href;
     } catch (error) {
       console.error('Error generating signed URL:', error);
@@ -183,30 +183,36 @@ const App = () => {
       timeout: 120000
     });
     
-    // Add comprehensive error handling
-    viewer.addHandler('tile-load-failed', async function(event) {
-      console.log('Tile load failed, attempting refresh');
+  // Add comprehensive error handling
+  viewer.addHandler('tile-load-failed', async function(event) {
+    console.log('Tile load failed, attempting refresh');
+    if (event && event.preventDefault) {
       event.preventDefault();
-      if (!isRefreshing) {
-        await refreshUrls();
-      }
-    });
+    }
+    if (!isRefreshing) {
+      await refreshUrls();
+    }
+  });
 
-    viewer.addHandler('open-failed', async function(event) {
-      console.log('Open failed, attempting refresh');
+  viewer.addHandler('open-failed', async function(event) {
+    console.log('Open failed, attempting refresh');
+    if (event && event.preventDefault) {
       event.preventDefault();
-      if (!isRefreshing) {
-        await refreshUrls();
-      }
-    });
+    }
+    if (!isRefreshing) {
+      await refreshUrls();
+    }
+  });
 
-    viewer.addHandler('error', async function(event) {
-      console.log('Viewer error, attempting refresh');
+  viewer.addHandler('error', async function(event) {
+    console.log('Viewer error, attempting refresh');
+    if (event && event.preventDefault) {
       event.preventDefault();
-      if (!isRefreshing) {
-        await refreshUrls();
-      }
-    });
+    }
+    if (!isRefreshing) {
+      await refreshUrls();
+    }
+  });
     
     viewer.addHandler('open', function() {
       console.log('Viewer is ready and image is loaded');
