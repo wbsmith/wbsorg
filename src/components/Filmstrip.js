@@ -1,8 +1,18 @@
-import React from 'react';
+import React, { forwardRef } from 'react';
 
-const Filmstrip = ({ images, selectedImage, onImageSelect }) => {
+const Filmstrip = forwardRef(({ images, selectedImage, onImageSelect }, outerRef) => {
   const scrollRef = React.useRef(null);
   const keyPressRef = React.useRef(null);
+
+  // Share scrollRef with parent through forwardRef
+  React.useImperativeHandle(outerRef, () => ({
+    getScrollPosition: () => scrollRef.current?.scrollLeft || 0,
+    setScrollPosition: (position) => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollLeft = position;
+      }
+    }
+  }));
 
   const handleScroll = (direction) => {
     if (scrollRef.current) {
@@ -14,7 +24,7 @@ const Filmstrip = ({ images, selectedImage, onImageSelect }) => {
   // Handle keyboard navigation with debouncing
   React.useEffect(() => {
     const handleKeyDown = (e) => {
-      // Prevent default scrolling behavior
+      // Rest of your existing keyboard handling code...
       if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
         e.preventDefault();
       }
@@ -46,7 +56,6 @@ const Filmstrip = ({ images, selectedImage, onImageSelect }) => {
           const elementOffset = thumbnailElement.offsetLeft;
           const elementWidth = thumbnailElement.offsetWidth;
           
-          // Calculate the target scroll position
           let scrollPosition;
           if (e.key === 'ArrowRight') {
             scrollPosition = elementOffset - (containerWidth - elementWidth) / 2;
@@ -116,6 +125,6 @@ const Filmstrip = ({ images, selectedImage, onImageSelect }) => {
       </button>
     </div>
   );
-};
+});
 
 export default Filmstrip;

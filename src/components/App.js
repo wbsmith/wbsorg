@@ -1,8 +1,12 @@
 import React from 'react';
 import OpenSeadragon from 'openseadragon';
 import { Amplify } from 'aws-amplify';
-import { getUrl, list } from 'aws-amplify/storage';
+import { uploadData, getUrl, list } from 'aws-amplify/storage';
 import Filmstrip from './Filmstrip';
+
+// More defensive debugging
+console.log('Amplify available?:', !!Amplify);
+console.log('Storage methods available?:', !!list, !!getUrl);
 
 const App = () => {
   const [images, setImages] = React.useState([]);
@@ -10,10 +14,35 @@ const App = () => {
   const [viewer, setViewer] = React.useState(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const filmstripRef = React.useRef(null);
+
+  const handleImageSelect = React.useCallback((image) => {
+    setSelectedImage(image);
+    if (viewer) {
+      viewer.open({
+        type: 'image',
+        url: image.url,
+        crossOriginPolicy: 'Anonymous',
+        buildPyramid: false,
+        immediateRender: true,
+        success: function() {
+          console.log('Image loaded successfully');
+        },
+        error: async function(err) {
+          console.error('Error loading image:', err);
+          // Try to refresh URLs if image fails to load
+          if (!isRefreshing) {
+            await refreshUrls();
+          }
+        }
+      });
+    }
+  }, [viewer, isRefreshing]);
 
   // Get pre-signed URL using Amplify Storage
   const getPreSignedUrl = async (key) => {
     try {
+      console.log('Attempting to get URL for key:', key);
       const result = await getUrl({ key, options: { expires: 3600 }});
       return result.url.href;
     } catch (error) {
@@ -22,12 +51,15 @@ const App = () => {
     }
   };
 
-  // Refresh URLs for all images
+  // Add refresh URLs function
   const refreshUrls = async () => {
     if (isRefreshing) return;
-    
     setIsRefreshing(true);
+    
     try {
+      // Store scroll position before update
+      const scrollPosition = filmstripRef.current?.getScrollPosition() || 0;
+
       const updatedImages = await Promise.all(
         images.map(async (image) => ({
           ...image,
@@ -37,9 +69,11 @@ const App = () => {
       );
       setImages(updatedImages);
       
+      // Update selected image if there is one
       if (selectedImage) {
         const newUrl = await getPreSignedUrl(selectedImage.key);
-        setSelectedImage(prev => ({ ...prev, url: newUrl }));
+        const updatedSelected = { ...selectedImage, url: newUrl };
+        setSelectedImage(updatedSelected);
         
         if (viewer) {
           viewer.open({
@@ -51,6 +85,11 @@ const App = () => {
           });
         }
       }
+
+      // Restore scroll position after update
+      requestAnimationFrame(() => {
+        filmstripRef.current?.setScrollPosition(scrollPosition);
+      });
     } catch (error) {
       console.error('Error refreshing URLs:', error);
     } finally {
@@ -58,25 +97,13 @@ const App = () => {
     }
   };
 
-  // Handle image loading errors
-  const handleImageError = async () => {
-    if (!isRefreshing) {
-      console.log('Image load failed, attempting to refresh URLs');
-      await refreshUrls();
-    }
-  };
-
   React.useEffect(() => {
     const fetchImages = async () => {
       try {
         console.log('Starting fetchImages');
-        const response = await list({ 
-          prefix: 'full_imgs/',
-          options: { 
-            accessLevel: 'guest'
-          }
-        });
         
+        console.log('Attempting to list images from full_imgs/');
+        const response = await list({ prefix: 'full_imgs/' });
         console.log('List response:', response);
         
         const imageList = await Promise.all(
@@ -108,7 +135,6 @@ const App = () => {
 
     fetchImages();
 
-    // Initialize OpenSeadragon
     const viewer = OpenSeadragon({
       id: 'openseadragon-viewer',
       prefixUrl: 'https://cdn.jsdelivr.net/npm/openseadragon@3.1/build/openseadragon/images/',
@@ -128,8 +154,8 @@ const App = () => {
         dblClickToZoom: true,
         pinchToZoom: true
       },
-      showNavigator: false,
-      showReferenceStrip: false,
+      showNavigator: false,  // Suppress default UI elements
+      showReferenceStrip: false,  // Suppress default UI elements
       defaultZoomLevel: 0,
       preserveZoom: true
     });
@@ -137,9 +163,12 @@ const App = () => {
     viewer.addHandler('open', function() {
       console.log('Viewer is ready and image is loaded');
     });
-
-    viewer.addHandler('open-failed', handleImageError);
-    viewer.addHandler('tile-load-failed', handleImageError);
+    
+    viewer.addHandler('open-failed', async function() {
+      if (!isRefreshing) {
+        await refreshUrls();
+      }
+    });
     
     setViewer(viewer);
 
@@ -148,30 +177,28 @@ const App = () => {
     };
   }, []);
 
-  const handleImageSelect = React.useCallback((image) => {
-    setSelectedImage(image);
-    if (viewer) {
-      viewer.open({
-        type: 'image',
-        url: image.url,
-        crossOriginPolicy: 'Anonymous',
-        buildPyramid: false,
-        immediateRender: true,
-        success: function() {
-          console.log('Image loaded successfully');
-        },
-        error: async function(err) {
-          console.error('Error loading image:', err);
-          await handleImageError();
-        }
-      });
+  // Initial image selection
+  React.useEffect(() => {
+    if (viewer && images.length > 0 && !selectedImage) {
+      handleImageSelect(images[0]);
     }
-  }, [viewer]);
+  }, [viewer, images, selectedImage, handleImageSelect]);
+
+  // URL regeneration logic
+  React.useEffect(() => {
+    const regenerateUrls = async () => {
+      if (images.length === 0) return;
+      await refreshUrls();
+    };
+
+    const interval = setInterval(regenerateUrls, 50 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [images, selectedImage, viewer]);
 
   return (
     <div className="app-container">
       <header>
-        <h1>Photo Gallery</h1>
+        <h1>Full Image Gallery</h1>
       </header>
       
       <main>
@@ -183,6 +210,7 @@ const App = () => {
         </div>
         
         <Filmstrip
+          ref={filmstripRef}
           images={images}
           selectedImage={selectedImage}
           onImageSelect={handleImageSelect}
