@@ -16,7 +16,7 @@ const App = () => {
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const filmstripRef = React.useRef(null);
 
-  // Get pre-signed URL using Amplify Storage
+  // Add error checking to getPreSignedUrl
   const getPreSignedUrl = async (key) => {
     try {
       console.log('Attempting to get URL for key:', key);
@@ -24,48 +24,68 @@ const App = () => {
       return result.url.href;
     } catch (error) {
       console.error('Error generating signed URL:', error);
+      // If this is during initialization, we want to throw
       throw error;
     }
   };
 
-  // Refresh URLs function
+  // Modify refreshUrls to keep existing thumbnails until new ones are ready
   const refreshUrls = async () => {
     if (isRefreshing) return;
     setIsRefreshing(true);
     
     try {
-      // Store scroll position before update
       const scrollPosition = filmstripRef.current?.getScrollPosition() || 0;
 
+      // Create new image list but don't update state yet
       const updatedImages = await Promise.all(
-        images.map(async (image) => ({
-          ...image,
-          url: await getPreSignedUrl(image.key),
-          thumbnail: await getPreSignedUrl(`thumbnails/${image.id}`)
-        }))
+        images.map(async (image) => {
+          try {
+            const fullImageUrl = await getPreSignedUrl(image.key);
+            const thumbnailUrl = await getPreSignedUrl(`thumbnails/${image.id}`);
+            return {
+              ...image,
+              url: fullImageUrl,
+              thumbnail: thumbnailUrl
+            };
+          } catch (error) {
+            console.error(`Failed to refresh URLs for image ${image.id}:`, error);
+            return image; // Keep existing URLs if refresh fails
+          }
+        })
       );
-      setImages(updatedImages);
+
+      // Only update state if we got new URLs
+      if (updatedImages.some(img => img.url !== images.find(i => i.id === img.id)?.url)) {
+        setImages(updatedImages);
+      }
       
       if (selectedImage) {
-        const newUrl = await getPreSignedUrl(selectedImage.key);
-        const updatedSelected = { ...selectedImage, url: newUrl };
-        setSelectedImage(updatedSelected);
-        
-        if (viewer) {
-          viewer.open({
-            type: 'image',
-            url: newUrl,
-            crossOriginPolicy: 'Anonymous',
-            buildPyramid: false,
-            immediateRender: true
-          });
+        try {
+          const newUrl = await getPreSignedUrl(selectedImage.key);
+          const updatedSelected = { ...selectedImage, url: newUrl };
+          setSelectedImage(updatedSelected);
+          
+          if (viewer) {
+            viewer.open({
+              type: 'image',
+              url: newUrl,
+              crossOriginPolicy: 'Anonymous',
+              buildPyramid: false,
+              immediateRender: true
+            });
+          }
+        } catch (error) {
+          console.error('Failed to refresh selected image URL:', error);
         }
       }
 
-      // Restore scroll position after update
-      requestAnimationFrame(() => {
-        filmstripRef.current?.setScrollPosition(scrollPosition);
-      });
+      setTimeout(() => {
+        requestAnimationFrame(() => {
+          filmstripRef.current?.setScrollPosition(scrollPosition);
+        });
+      }, 0);
+
     } catch (error) {
       console.error('Error refreshing URLs:', error);
     } finally {
@@ -73,12 +93,20 @@ const App = () => {
     }
   };
 
-  // Handle image selection with improved error handling
+  // Modify handleImageSelect to handle 403s
   const handleImageSelect = React.useCallback((image) => {
     setSelectedImage(image);
     if (viewer) {
       const openImage = async () => {
         try {
+          // First try to fetch the image to check if URL is still valid
+          const response = await fetch(image.url);
+          if (response.status === 403) {
+            console.log('URL expired, refreshing...');
+            await refreshUrls();
+            return;
+          }
+
           await viewer.open({
             type: 'image',
             url: image.url,
@@ -183,36 +211,36 @@ const App = () => {
       timeout: 120000
     });
     
-  // Add comprehensive error handling
-  viewer.addHandler('tile-load-failed', async function(event) {
-    console.log('Tile load failed, attempting refresh');
-    if (event && event.preventDefault) {
-      event.preventDefault();
-    }
-    if (!isRefreshing) {
-      await refreshUrls();
-    }
-  });
+    // Add comprehensive error handling
+    viewer.addHandler('tile-load-failed', async function(event) {
+      console.log('Tile load failed, attempting refresh');
+      if (event && event.preventDefault) {
+        event.preventDefault();
+      }
+      if (!isRefreshing) {
+        await refreshUrls();
+      }
+    });
 
-  viewer.addHandler('open-failed', async function(event) {
-    console.log('Open failed, attempting refresh');
-    if (event && event.preventDefault) {
-      event.preventDefault();
-    }
-    if (!isRefreshing) {
-      await refreshUrls();
-    }
-  });
+    viewer.addHandler('open-failed', async function(event) {
+      console.log('Open failed, attempting refresh');
+      if (event && event.preventDefault) {
+        event.preventDefault();
+      }
+      if (!isRefreshing) {
+        await refreshUrls();
+      }
+    });
 
-  viewer.addHandler('error', async function(event) {
-    console.log('Viewer error, attempting refresh');
-    if (event && event.preventDefault) {
-      event.preventDefault();
-    }
-    if (!isRefreshing) {
-      await refreshUrls();
-    }
-  });
+    viewer.addHandler('error', async function(event) {
+      console.log('Viewer error, attempting refresh');
+      if (event && event.preventDefault) {
+        event.preventDefault();
+      }
+      if (!isRefreshing) {
+        await refreshUrls();
+      }
+    });
     
     viewer.addHandler('open', function() {
       console.log('Viewer is ready and image is loaded');
