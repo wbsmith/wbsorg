@@ -8,6 +8,9 @@ import Filmstrip from './Filmstrip';
 console.log('Amplify available?:', !!Amplify);
 console.log('Storage methods available?:', !!list, !!getUrl);
 
+// Utility function for delays
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 const App = () => {
   const [images, setImages] = React.useState([]);
   const [selectedImage, setSelectedImage] = React.useState(null);
@@ -16,20 +19,27 @@ const App = () => {
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const filmstripRef = React.useRef(null);
 
-  // Add error checking to getPreSignedUrl
-  const getPreSignedUrl = async (key) => {
+  // Add retry logic to getPreSignedUrl
+  const getPreSignedUrl = async (key, retryCount = 0) => {
     try {
       console.log('Attempting to get URL for key:', key);
       const result = await getUrl({ key, options: { expires: 120 }});
       return result.url.href;
     } catch (error) {
       console.error('Error generating signed URL:', error);
-      // If this is during initialization, we want to throw
+      
+      // If we hit rate limit, wait and retry
+      if (error.message?.includes('Too Many Requests') && retryCount < 3) {
+        const backoffTime = Math.pow(2, retryCount) * 1000; // Exponential backoff
+        console.log(`Rate limited, waiting ${backoffTime}ms before retry`);
+        await delay(backoffTime);
+        return getPreSignedUrl(key, retryCount + 1);
+      }
       throw error;
     }
   };
 
-  // Modify refreshUrls to keep existing thumbnails until new ones are ready
+  // Modify refreshUrls to process in batches
   const refreshUrls = async () => {
     if (isRefreshing) return;
     setIsRefreshing(true);
@@ -37,23 +47,32 @@ const App = () => {
     try {
       const scrollPosition = filmstripRef.current?.getScrollPosition() || 0;
 
-      // Create new image list but don't update state yet
-      const updatedImages = await Promise.all(
-        images.map(async (image) => {
-          try {
-            const fullImageUrl = await getPreSignedUrl(image.key);
-            const thumbnailUrl = await getPreSignedUrl(`thumbnails/${image.id}`);
-            return {
-              ...image,
-              url: fullImageUrl,
-              thumbnail: thumbnailUrl
-            };
-          } catch (error) {
-            console.error(`Failed to refresh URLs for image ${image.id}:`, error);
-            return image; // Keep existing URLs if refresh fails
-          }
-        })
-      );
+      // Process images in batches of 5
+      const batchSize = 5;
+      const updatedImages = [];
+      
+      for (let i = 0; i < images.length; i += batchSize) {
+        const batch = images.slice(i, i + batchSize);
+        const batchResults = await Promise.all(
+          batch.map(async (image) => {
+            try {
+              const fullImageUrl = await getPreSignedUrl(image.key);
+              await delay(200); // Add small delay between requests
+              const thumbnailUrl = await getPreSignedUrl(`thumbnails/${image.id}`);
+              return {
+                ...image,
+                url: fullImageUrl,
+                thumbnail: thumbnailUrl
+              };
+            } catch (error) {
+              console.error(`Failed to refresh URLs for image ${image.id}:`, error);
+              return image; // Keep existing URLs if refresh fails
+            }
+          })
+        );
+        updatedImages.push(...batchResults);
+        await delay(500); // Delay between batches
+      }
 
       // Only update state if we got new URLs
       if (updatedImages.some(img => img.url !== images.find(i => i.id === img.id)?.url)) {
