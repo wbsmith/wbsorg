@@ -1,37 +1,48 @@
-import React, { forwardRef } from 'react';
+import React, { forwardRef, useRef, useImperativeHandle, useEffect, useCallback } from 'react';
+import { debounce } from 'lodash'; // Install lodash: npm install lodash
 
-const Filmstrip = forwardRef(({ images, selectedImage, onImageSelect }, outerRef) => {
-  const scrollRef = React.useRef(null);
-  const keyPressRef = React.useRef(null);
+const Filmstrip = forwardRef(({ images, selectedImage, onImageSelect, isLoading }, outerRef) => {
+  const scrollRef = useRef(null);
+  const keyPressRef = useRef(null); // Consider removing if debouncing works well
+  const selectedImageRef = useRef(selectedImage); // Keep track of selected image
+
+  // Update selectedImageRef whenever selectedImage changes
+  useEffect(() => {
+    selectedImageRef.current = selectedImage;
+  }, [selectedImage]);
+
 
   // Share scrollRef with parent through forwardRef
-  React.useImperativeHandle(outerRef, () => ({
+  useImperativeHandle(outerRef, () => ({
     getScrollPosition: () => scrollRef.current?.scrollLeft || 0,
     setScrollPosition: (position) => {
       if (scrollRef.current) {
         scrollRef.current.scrollLeft = position;
       }
-    }
+    },
   }));
 
-  const handleScroll = (direction) => {
-    if (scrollRef.current) {
-      const scrollAmount = direction === 'left' ? -200 : 200;
-      scrollRef.current.scrollLeft += scrollAmount;
-    }
-  };
-
-  // Handle keyboard navigation with debouncing
-  React.useEffect(() => {
-    const handleKeyDown = (e) => {
-      // Rest of your existing keyboard handling code...
-      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-        e.preventDefault();
+  // Debounced scroll handler.  This is MUCH better than the keyPressRef approach.
+  const handleScroll = useCallback(
+    debounce((direction) => {
+      if (scrollRef.current) {
+        const scrollAmount = direction === 'left' ? -200 : 200;
+        scrollRef.current.scrollLeft += scrollAmount;
       }
+    }, 100), // 100ms debounce
+    []
+  );
 
-      if (!images.length || keyPressRef.current === e.key) return;
+  // Optimized keyboard navigation with useCallback
+  const handleKeyDown = useCallback(
+    (e) => {
+      if (!images.length) return;
 
-      const currentIndex = images.findIndex(img => img.id === selectedImage?.id);
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        e.preventDefault(); // Prevent page scrolling
+      }
+        //Using ref to get selectedImage
+      const currentIndex = images.findIndex((img) => img.id === selectedImageRef.current?.id);
       let newIndex = currentIndex;
 
       switch (e.key) {
@@ -46,45 +57,48 @@ const Filmstrip = forwardRef(({ images, selectedImage, onImageSelect }, outerRef
       }
 
       if (newIndex !== currentIndex) {
-        keyPressRef.current = e.key;
         onImageSelect(images[newIndex]);
-        
+
+        // Efficiently scroll to the selected thumbnail
         const thumbnailElement = scrollRef.current?.querySelector(`[data-image-id="${images[newIndex].id}"]`);
         if (thumbnailElement && scrollRef.current) {
-          const container = scrollRef.current;
-          const containerWidth = container.clientWidth;
-          const elementOffset = thumbnailElement.offsetLeft;
-          const elementWidth = thumbnailElement.offsetWidth;
-          
-          let scrollPosition;
-          if (e.key === 'ArrowRight') {
-            scrollPosition = elementOffset - (containerWidth - elementWidth) / 2;
-          } else {
-            scrollPosition = elementOffset - containerWidth / 3;
-          }
-          
+            const container = scrollRef.current;
+            const containerWidth = container.clientWidth;
+            const elementOffset = thumbnailElement.offsetLeft;
+            const elementWidth = thumbnailElement.offsetWidth;
+
+          // Center the selected thumbnail
+          const scrollPosition = elementOffset - (containerWidth - elementWidth) / 2;
+
           container.scrollTo({
             left: scrollPosition,
-            behavior: 'smooth'
+            behavior: 'smooth',
           });
         }
       }
-    };
+    },
+    [images, onImageSelect]
+  ); // Removed selectedImage from dependency array
 
-    const handleKeyUp = (e) => {
-      if (e.key === keyPressRef.current) {
-        keyPressRef.current = null;
-      }
-    };
+    //Combined keydown and keyup into one debounced function.
+    const debouncedKeyDown = useCallback(debounce(handleKeyDown, 150), [handleKeyDown]);
 
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-    
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-    };
-  }, [images, selectedImage, onImageSelect]);
+    useEffect(() => {
+        const keyDownHandler = (e) => {
+            debouncedKeyDown(e);
+        };
+
+        window.addEventListener('keydown', keyDownHandler);
+
+        return () => {
+            window.removeEventListener('keydown', keyDownHandler);
+            debouncedKeyDown.cancel(); // Cancel any pending debounced calls
+        };
+    }, [debouncedKeyDown]); // Use debouncedKeyDown in the effect
+
+
+  // Lazy-load images
+  const imageLoaded = {}; // Keep track of loaded images
 
   return (
     <div className="filmstrip-container">
@@ -95,27 +109,37 @@ const Filmstrip = forwardRef(({ images, selectedImage, onImageSelect }, outerRef
       >
         ‹
       </button>
-      
+
       <div className="filmstrip-scroll" ref={scrollRef}>
-        <div className="filmstrip">
-          {images.map((image) => (
-            <div
-              key={image.id}
-              data-image-id={image.id}
-              className={`thumbnail ${selectedImage?.id === image.id ? 'selected' : ''}`}
-              onClick={() => onImageSelect(image)}
-            >
-              <img 
-                src={image.thumbnail} 
-                alt={image.title}
-                crossOrigin="anonymous"
-              />
-              <span className="image-title">{image.id}</span>
-            </div>
-          ))}
-        </div>
+          <div className="filmstrip">
+            {images.map((image) => {
+                const isSelected = selectedImage?.id === image.id;
+                return (
+                    <div
+                        key={image.id}
+                        data-image-id={image.id}
+                        className={`thumbnail ${isSelected ? 'selected' : ''}`}
+                        onClick={() => onImageSelect(image)}
+                    >
+                        {/* Conditional rendering with lazy loading */}
+                        <img
+                            src={isLoading || !imageLoaded[image.id] ? "placeholder.png" : image.thumbnail}  // Use a placeholder
+                            alt={image.title}
+                            crossOrigin="anonymous"
+                            loading="lazy"
+                            onLoad={() => { imageLoaded[image.id] = true; }} // Mark as loaded
+                            style={{
+                                opacity: isLoading || !imageLoaded[image.id] ? 0.5 : 1, //Dim if loading or placeholder
+                                transition: 'opacity 0.3s ease' // Smooth transition
+                            }}
+                        />
+                        <span className="image-title">{image.id}</span>
+                    </div>
+                );
+              })}
+          </div>
       </div>
-      
+
       <button
         className="scroll-button right"
         onClick={() => handleScroll('right')}
