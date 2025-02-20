@@ -5,7 +5,7 @@ const Filmstrip = forwardRef(({ images, selectedImage, onImageSelect, isLoading 
     const scrollRef = useRef(null);
     const selectedImageRef = useRef(selectedImage);
     const [thumbnailsLoaded, setThumbnailsLoaded] = useState({});
-    const [initialLoadComplete, setInitialLoadComplete] = useState(false); // NEW: Track initial load
+    const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false); // Track initial loading
 
     useEffect(() => {
         selectedImageRef.current = selectedImage;
@@ -87,18 +87,18 @@ const Filmstrip = forwardRef(({ images, selectedImage, onImageSelect, isLoading 
         };
     }, [debouncedKeyDown]);
 
-    useEffect(() => {
-        setThumbnailsLoaded({});
-        // Mark initial load as complete when images change (after initial fetch)
-        if (!isLoading) {
-            setInitialLoadComplete(true);
-        }
-    }, [images, isLoading]); // Depend on isLoading as well
 
     useEffect(() => {
-        // Mark initial load complete when isLoading changes to false for the first time.
+        setThumbnailsLoaded({}); // Reset on new images
+        // Mark initial loading as complete after images are fetched
+        if (!isLoading) {
+            setHasInitiallyLoaded(true);
+        }
+    }, [images, isLoading]);
+
+      useEffect(() => {
         if(!isLoading) {
-            setInitialLoadComplete(true);
+            setHasInitiallyLoaded(true);
         }
     }, [isLoading]);
 
@@ -125,20 +125,40 @@ const Filmstrip = forwardRef(({ images, selectedImage, onImageSelect, isLoading 
                                 style={{ backgroundColor: "black" }}
                             >
                                 <img
-                                    src={image.thumbnail} // ALWAYS set the src
+                                    src={image.thumbnail} // Always set the src
                                     alt={image.title}
                                     crossOrigin="anonymous"
                                     loading="lazy"
                                     onLoad={() => {
-                                        setThumbnailsLoaded(prevLoaded => ({ ...prevLoaded, [image.id]: true }));
+                                        // Use a setTimeout to ensure the state update happens *after* the current render
+                                        setTimeout(() => {
+                                             setThumbnailsLoaded(prevLoaded => {
+                                                // Prevent unnecessary updates if already loaded
+                                                if (prevLoaded[image.id]) {
+                                                  return prevLoaded;
+                                                }
+                                                return { ...prevLoaded, [image.id]: true };
+                                              });
+                                        }, 0);
                                     }}
                                     onError={() => {
-                                        console.error(`Error loading image: ${image.thumbnail}`);
-                                        setThumbnailsLoaded(prevLoaded => ({ ...prevLoaded, [image.id]: true }));
+                                        console.error(`Error loading thumbnail: ${image.thumbnail}`);
+                                        // Ensure we mark as loaded even on error to avoid infinite retries
+                                         setTimeout(() => {
+                                              setThumbnailsLoaded(prevLoaded => {
+                                                if (prevLoaded[image.id]) {
+                                                  return prevLoaded;
+                                                }
+                                                return { ...prevLoaded, [image.id]: true };
+                                              });
+                                         }, 0);
                                     }}
                                     style={{
-                                        // Only hide AFTER the initial load AND if not loaded
-                                        display: initialLoadComplete && !thumbnailsLoaded[image.id] ? "none" : "block",
+                                        // Hide only AFTER initial load AND if not loaded
+                                        display: hasInitiallyLoaded && !thumbnailsLoaded[image.id] ? "none" : "block",
+                                        width: '150px',  // Set a fixed width (adjust as needed)
+                                        height: '100px', // Set a fixed height (adjust as needed)
+                                        objectFit: 'cover', // Ensure images cover the space without distortion
                                     }}
                                 />
                                 <span className="image-title" style={{ color: "blue" }}>{image.id}</span>
