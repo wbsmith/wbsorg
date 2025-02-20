@@ -4,7 +4,8 @@ import { debounce } from 'lodash';
 const Filmstrip = forwardRef(({ images, selectedImage, onImageSelect, isLoading }, outerRef) => {
     const scrollRef = useRef(null);
     const selectedImageRef = useRef(selectedImage);
-    const [imageLoaded, setImageLoaded] = useState({});
+    const [thumbnailsLoaded, setThumbnailsLoaded] = useState({});
+    const [initialLoadComplete, setInitialLoadComplete] = useState(false); // NEW: Track initial load
 
     useEffect(() => {
         selectedImageRef.current = selectedImage;
@@ -86,6 +87,20 @@ const Filmstrip = forwardRef(({ images, selectedImage, onImageSelect, isLoading 
         };
     }, [debouncedKeyDown]);
 
+    useEffect(() => {
+        setThumbnailsLoaded({});
+        // Mark initial load as complete when images change (after initial fetch)
+        if (!isLoading) {
+            setInitialLoadComplete(true);
+        }
+    }, [images, isLoading]); // Depend on isLoading as well
+
+    useEffect(() => {
+        // Mark initial load complete when isLoading changes to false for the first time.
+        if(!isLoading) {
+            setInitialLoadComplete(true);
+        }
+    }, [isLoading]);
 
     return (
         <div className="filmstrip-container">
@@ -97,7 +112,7 @@ const Filmstrip = forwardRef(({ images, selectedImage, onImageSelect, isLoading 
                 ‹
             </button>
 
-            <div className="filmstrip-scroll" ref={scrollRef} style={{backgroundColor: "#f0f0f0"}}> {/*Set background color*/}
+            <div className="filmstrip-scroll" ref={scrollRef} style={{ backgroundColor: "black" }}>
                 <div className="filmstrip">
                     {images.map((image) => {
                         const isSelected = selectedImage?.id === image.id;
@@ -107,28 +122,26 @@ const Filmstrip = forwardRef(({ images, selectedImage, onImageSelect, isLoading 
                                 data-image-id={image.id}
                                 className={`thumbnail ${isSelected ? 'selected' : ''}`}
                                 onClick={() => onImageSelect(image)}
-                                style={{
-                                        backgroundColor: "#f0f0f0",  //Consistent background
-                                    }}
+                                style={{ backgroundColor: "black" }}
                             >
                                 <img
-                                    src={imageLoaded[image.id] ? image.thumbnail : ""} // Empty string when not loaded
+                                    src={image.thumbnail} // ALWAYS set the src
                                     alt={image.title}
                                     crossOrigin="anonymous"
                                     loading="lazy"
                                     onLoad={() => {
-                                        setImageLoaded(prevLoaded => ({ ...prevLoaded, [image.id]: true }));
+                                        setThumbnailsLoaded(prevLoaded => ({ ...prevLoaded, [image.id]: true }));
                                     }}
                                     onError={() => {
                                         console.error(`Error loading image: ${image.thumbnail}`);
-                                        setImageLoaded(prevLoaded => ({ ...prevLoaded, [image.id]: true }));
+                                        setThumbnailsLoaded(prevLoaded => ({ ...prevLoaded, [image.id]: true }));
                                     }}
                                     style={{
-                                      display: isLoading || !imageLoaded[image.id] ? "none" : "block", //Hide until loaded
-                                        transition: 'opacity 0.3s ease',
+                                        // Only hide AFTER the initial load AND if not loaded
+                                        display: initialLoadComplete && !thumbnailsLoaded[image.id] ? "none" : "block",
                                     }}
                                 />
-                                <span className="image-title">{image.id}</span>
+                                <span className="image-title" style={{ color: "blue" }}>{image.id}</span>
                             </div>
                         );
                     })}
