@@ -5,6 +5,7 @@ import { uploadData, getUrl, list } from 'aws-amplify/storage';
 import Filmstrip from './Filmstrip';
 import EXIF from 'exif-js';
 import Rating from 'react-rating';
+import './styles/index.css'; // Import the updated CSS file
 
 console.log('Amplify available?:', !!Amplify);
 console.log('Storage methods available?:', !!list, !!getUrl);
@@ -297,17 +298,23 @@ const App = () => {
           />
           {selectedImage && (
             <div>
-              <button onClick={() => fetchExifData(selectedImage.url)}>Show EXIF Data</button>
-              <Rating
-                initialRating={ratings[selectedImage.id] || 0}
-                onChange={(rate) => handleRatingChange(selectedImage.id, rate)}
-              />
+              <div className="rating-container">
+                <Rating
+                  initialRating={ratings[selectedImage.id] || 0}
+                  onChange={(rate) => handleRatingChange(selectedImage.id, rate)}
+                  emptySymbol={<img src="/path/to/star-empty.png" className="rating-star" alt="empty star" />}
+                  fullSymbol={<img src="/path/to/star-full.png" className="rating-star" alt="full star" />}
+                />
+              </div>
+              <button className="exif-button" onClick={() => fetchExifData(selectedImage.url)}>Show EXIF Data</button>
             </div>
           )}
           {exifData && (
-            <div className="exif-overlay">
-              <button onClick={() => setExifData(null)}>Close</button>
-              <pre>{JSON.stringify(exifData, null, 2)}</pre>
+            <div className="exif-modal">
+              <div className="exif-content">
+                <button onClick={() => setExifData(null)}>Close</button>
+                <pre>{JSON.stringify(exifData, null, 2)}</pre>
+              </div>
             </div>
           )}
           {errorMessage && (
