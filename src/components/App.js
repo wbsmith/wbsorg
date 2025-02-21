@@ -5,7 +5,7 @@ import { uploadData, getUrl, list } from 'aws-amplify/storage';
 import Filmstrip from './Filmstrip';
 import EXIF from 'exif-js';
 import Rating from 'react-rating';
-import './src/styles/index.css'; // Import the updated CSS file
+//import './src/styles/index.css'; // Import the updated CSS file
 
 console.log('Amplify available?:', !!Amplify);
 console.log('Storage methods available?:', !!list, !!getUrl);
