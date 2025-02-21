@@ -3,6 +3,8 @@ import OpenSeadragon from 'openseadragon';
 import { Amplify } from 'aws-amplify';
 import { uploadData, getUrl, list } from 'aws-amplify/storage';
 import Filmstrip from './Filmstrip';
+import EXIF from 'exif-js';
+import Rating from 'react-rating';
 
 console.log('Amplify available?:', !!Amplify);
 console.log('Storage methods available?:', !!list, !!getUrl);
@@ -15,6 +17,8 @@ const App = () => {
   const [viewer, setViewer] = React.useState(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const [exifData, setExifData] = React.useState(null);
+  const [ratings, setRatings] = React.useState({});
   const filmstripRef = React.useRef(null);
   const urlCache = React.useRef(new Map()); // Cache URLs
 
@@ -137,35 +141,25 @@ const App = () => {
       }
   }, [viewer, isRefreshing]);
 
-//   const handleImageSelect = React.useCallback(async (image) => {
-//     setSelectedImage(image);
-//     if (viewer) {
-//         try {
-//             viewer.open({
-//                 type: 'image',
-//                 url: image.url,
-//                 crossOriginPolicy: 'Anonymous',
-//                 buildPyramid: false,
-//             });
-//             // Preload next and previous images
-//             const currentIndex = images.findIndex(img => img.id === image.id);
-//             const nextImage = images[currentIndex + 1];
-//             const prevImage = images[currentIndex - 1];
-//             if (nextImage) {
-//                 new Image().src = nextImage.url;
-//             }
-//             if (prevImage) {
-//                 new Image().src = prevImage.url;
-//             }
-//         } catch (error) {
-//             console.error('Error in openImage:', error);
-//             if (!isRefreshing) {
-//                 await refreshUrls();
-//             }
-//         }
-//     }
-// }, [viewer, isRefreshing, images]);
+  const fetchExifData = (imageUrl) => {
+    const img = new Image();
+    img.src = imageUrl;
+    img.onload = () => {
+      EXIF.getData(img, () => {
+        const exif = EXIF.getAllTags(img);
+        setExifData(exif);
+      });
+    };
+  };
 
+  const handleRatingChange = (imageId, rating) => {
+    setRatings((prevRatings) => ({
+      ...prevRatings,
+      [imageId]: rating,
+    }));
+    // Here you can add code to save the rating to your backend
+    console.log(`Image ${imageId} rated ${rating}`);
+  };
 
   React.useEffect(() => {
     const fetchImages = async () => {
@@ -250,7 +244,6 @@ const App = () => {
         }
       });
 
-
     setViewer(viewer);
 
     return () => {
@@ -290,6 +283,21 @@ const App = () => {
             id="openseadragon-viewer"
             className="viewer-container"
           />
+          {selectedImage && (
+            <div>
+              <button onClick={() => fetchExifData(selectedImage.url)}>Show EXIF Data</button>
+              <Rating
+                initialRating={ratings[selectedImage.id] || 0}
+                onChange={(rate) => handleRatingChange(selectedImage.id, rate)}
+              />
+            </div>
+          )}
+          {exifData && (
+            <div className="exif-overlay">
+              <button onClick={() => setExifData(null)}>Close</button>
+              <pre>{JSON.stringify(exifData, null, 2)}</pre>
+            </div>
+          )}
         </div>
 
         <Filmstrip

@@ -6,10 +6,11 @@
     "@aws-sdk/client-s3": "^3.749.0",
     "@aws-sdk/s3-request-presigner": "^3.749.0",
     "aws-amplify": "^6.13.0",
-    "exif-js": "latest",
+    "exif-js": "^2.3.0",
     "openseadragon": "latest",
     "react": "latest",
-    "react-dom": "latest"
+    "react-dom": "latest",
+    "react-rating": "^2.0.5"
   },
   "devDependencies": {
     "@babel/core": "latest",
