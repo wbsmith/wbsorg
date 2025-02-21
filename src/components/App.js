@@ -117,25 +117,54 @@ const App = () => {
     }
   };
 
+  // const handleImageSelect = React.useCallback(async (image) => {
+  //     setSelectedImage(image);
+  //     if (viewer) {
+  //         try {
+  //             // No need to pre-fetch. OpenSeadragon handles loading.  Just open.
+  //             viewer.open({
+  //                 type: 'image',
+  //                 url: image.url,
+  //                 crossOriginPolicy: 'Anonymous',
+  //                 buildPyramid: false,
+  //             });
+  //         } catch (error) {
+  //             console.error('Error in openImage:', error);
+  //             if (!isRefreshing) {
+  //                 await refreshUrls();
+  //             }
+  //         }
+  //     }
+  // }, [viewer, isRefreshing]);
+
   const handleImageSelect = React.useCallback(async (image) => {
-      setSelectedImage(image);
-      if (viewer) {
-          try {
-              // No need to pre-fetch. OpenSeadragon handles loading.  Just open.
-              viewer.open({
-                  type: 'image',
-                  url: image.url,
-                  crossOriginPolicy: 'Anonymous',
-                  buildPyramid: false,
-              });
-          } catch (error) {
-              console.error('Error in openImage:', error);
-              if (!isRefreshing) {
-                  await refreshUrls();
-              }
-          }
-      }
-  }, [viewer, isRefreshing]);
+    setSelectedImage(image);
+    if (viewer) {
+        try {
+            viewer.open({
+                type: 'image',
+                url: image.url,
+                crossOriginPolicy: 'Anonymous',
+                buildPyramid: false,
+            });
+            // Preload next and previous images
+            const currentIndex = images.findIndex(img => img.id === image.id);
+            const nextImage = images[currentIndex + 1];
+            const prevImage = images[currentIndex - 1];
+            if (nextImage) {
+                new Image().src = nextImage.url;
+            }
+            if (prevImage) {
+                new Image().src = prevImage.url;
+            }
+        } catch (error) {
+            console.error('Error in openImage:', error);
+            if (!isRefreshing) {
+                await refreshUrls();
+            }
+        }
+    }
+}, [viewer, isRefreshing, images]);
 
 
   React.useEffect(() => {

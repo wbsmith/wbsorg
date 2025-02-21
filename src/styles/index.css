@@ -69,6 +69,7 @@ main {
 .filmstrip-scroll {
   flex: 1;
   overflow-x: scroll;
+  overflow-y: hidden; /* Prevent vertical scrolling */
   scrollbar-width: thin;
   scroll-behavior: smooth;
 }
@@ -77,6 +78,7 @@ main {
   display: flex;
   gap: 10px;
   padding: 10px 0;
+  height: 100%; /* Ensure the filmstrip takes the full height of the container */
 }
 
 .thumbnail {
@@ -85,6 +87,7 @@ main {
   cursor: pointer;
   transition: transform 0.2s;
   position: relative;
+  height: 100px; /* Ensure the thumbnail height is consistent */
 }
 
 .thumbnail:hover {
@@ -97,7 +100,7 @@ main {
 
 .thumbnail img {
   width: 100%;
-  height: 100px;
+  height: 100px; /* Ensure the image height is consistent */
   object-fit: cover;
   border-radius: 4px;
 }
