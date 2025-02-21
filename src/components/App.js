@@ -19,6 +19,7 @@ const App = () => {
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [exifData, setExifData] = React.useState(null);
   const [ratings, setRatings] = React.useState({});
+  const [errorMessage, setErrorMessage] = React.useState(null);
   const filmstripRef = React.useRef(null);
   const urlCache = React.useRef(new Map()); // Cache URLs
 
@@ -108,6 +109,7 @@ const App = () => {
           }
         } catch (error) {
           console.error('Failed to refresh selected image URL:', error);
+          setErrorMessage('Failed to load the selected image. Please try again later.');
         }
       }
 
@@ -116,6 +118,7 @@ const App = () => {
 
     } catch (error) {
       console.error('Error refreshing URLs:', error);
+      setErrorMessage('Error refreshing URLs. Please try again later.');
     } finally {
       setIsRefreshing(false);
     }
@@ -123,6 +126,7 @@ const App = () => {
 
   const handleImageSelect = React.useCallback(async (image) => {
       setSelectedImage(image);
+      setErrorMessage(null); // Clear any previous error messages
       if (viewer) {
           try {
               // No need to pre-fetch. OpenSeadragon handles loading.  Just open.
@@ -134,6 +138,7 @@ const App = () => {
               });
           } catch (error) {
               console.error('Error in openImage:', error);
+              setErrorMessage('Failed to load the selected image. Please try again later.');
               if (!isRefreshing) {
                   await refreshUrls();
               }
@@ -149,6 +154,9 @@ const App = () => {
         const exif = EXIF.getAllTags(img);
         setExifData(exif);
       });
+    };
+    img.onerror = () => {
+      setErrorMessage('Failed to load EXIF data. Please try again later.');
     };
   };
 
@@ -191,6 +199,7 @@ const App = () => {
         setImages(imageList);
       } catch (error) {
         console.error('Error in fetchImages:', error);
+        setErrorMessage('Failed to load images. Please try again later.');
       } finally {
         setIsLoading(false);
       }
@@ -233,16 +242,19 @@ const App = () => {
 
     viewer.addHandler('open-failed', async (event) => {
         console.warn('Open failed:', event);
+        setErrorMessage('Failed to load the image. Please try again later.');
         if (!isRefreshing) {
             refreshUrls();
         }
     });
-      viewer.addHandler('error', async function(event) {
-        console.log('Viewer error, attempting refresh');
-        if (!isRefreshing) {
-          refreshUrls();
-        }
-      });
+
+    viewer.addHandler('error', async function(event) {
+      console.log('Viewer error, attempting refresh');
+      setErrorMessage('Viewer error occurred. Please try again later.');
+      if (!isRefreshing) {
+        refreshUrls();
+      }
+    });
 
     setViewer(viewer);
 
@@ -296,6 +308,11 @@ const App = () => {
             <div className="exif-overlay">
               <button onClick={() => setExifData(null)}>Close</button>
               <pre>{JSON.stringify(exifData, null, 2)}</pre>
+            </div>
+          )}
+          {errorMessage && (
+            <div className="error-message">
+              {errorMessage}
             </div>
           )}
         </div>
