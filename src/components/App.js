@@ -5,7 +5,7 @@ import { uploadData, getUrl, list } from 'aws-amplify/storage';
 import Filmstrip from './Filmstrip';
 import EXIF from 'exif-js';
 import Rating from 'react-rating';
-import '/src/styles/index.css'; // Import the updated CSS file
+import './styles/index.css'; // Import the updated CSS file
 
 console.log('Amplify available?:', !!Amplify);
 console.log('Storage methods available?:', !!list, !!getUrl);
@@ -126,26 +126,25 @@ const App = () => {
   };
 
   const handleImageSelect = React.useCallback(async (image) => {
-      setSelectedImage(image);
-      setErrorMessage(null); // Clear any previous error messages
-      if (viewer) {
-          try {
-              // No need to pre-fetch. OpenSeadragon handles loading.  Just open.
-              viewer.open({
-                  type: 'image',
-                  url: image.url,
-                  crossOriginPolicy: 'Anonymous',
-                  buildPyramid: false,
-              });
-          } catch (error) {
-              console.error('Error in openImage:', error);
-              setErrorMessage('Failed to load the selected image. Please try again later.');
-              if (!isRefreshing) {
-                  await refreshUrls();
-              }
-          }
+    setSelectedImage(image);
+    setErrorMessage(null); // Clear any previous error messages
+    if (viewer) {
+      try {
+        // No need to pre-fetch. OpenSeadragon handles loading. Just open.
+        viewer.open({
+          type: 'image',
+          url: image.url,
+          crossOriginPolicy: 'Anonymous',
+          buildPyramid: false,
+        });
+      } catch (error) {
+        console.error('Error in openImage:', error);
+        setErrorMessage('Failed to load the selected image. Please try again later.');
+        await refreshUrls(); // Refresh URLs immediately
+        handleImageSelect(image); // Retry opening the image
       }
-  }, [viewer, isRefreshing]);
+    }
+  }, [viewer]);
 
   const fetchExifData = (imageUrl) => {
     const img = new Image();
@@ -236,25 +235,22 @@ const App = () => {
       console.warn('Tile load failed:', event);
       // Don't prevent default. OSD needs to know the tile failed.
       // Instead, refresh URLs *without* blocking the main thread.
-      if (!isRefreshing) {
-        refreshUrls(); // No `await` here.
-      }
+      await refreshUrls(); // Use `await` here to ensure URLs are refreshed before retrying.
+      viewer.open(event.place); // Retry opening the image.
     });
 
     viewer.addHandler('open-failed', async (event) => {
-        console.warn('Open failed:', event);
-        setErrorMessage('Failed to load the image. Please try again later.');
-        if (!isRefreshing) {
-            refreshUrls();
-        }
+      console.warn('Open failed:', event);
+      setErrorMessage('Failed to load the image. Please try again later.');
+      await refreshUrls(); // Use `await` here to ensure URLs are refreshed before retrying.
+      viewer.open(event.place); // Retry opening the image.
     });
 
     viewer.addHandler('error', async function(event) {
       console.log('Viewer error, attempting refresh');
       setErrorMessage('Viewer error occurred. Please try again later.');
-      if (!isRefreshing) {
-        refreshUrls();
-      }
+      await refreshUrls(); // Use `await` here to ensure URLs are refreshed before retrying.
+      viewer.open(event.place); // Retry opening the image.
     });
 
     setViewer(viewer);
@@ -270,19 +266,19 @@ const App = () => {
     }
   }, [viewer, images, selectedImage, handleImageSelect]);
 
-    //Reduced Refresh to every 30 minutes, and now it checks for existing cache.
-   React.useEffect(() => {
-        const regenerateUrls = async () => {
-            if (images.length === 0) return;
-            // Only refresh if there are no valid URLs in the cache
-            if (!images.every(img => urlCache.current.has(img.key) && urlCache.current.get(img.key).expiry > Date.now())) {
-                await refreshUrls();
-            }
-        };
+  // Reduced Refresh to every 30 minutes, and now it checks for existing cache.
+  React.useEffect(() => {
+    const regenerateUrls = async () => {
+      if (images.length === 0) return;
+      // Only refresh if there are no valid URLs in the cache
+      if (!images.every(img => urlCache.current.has(img.key) && urlCache.current.get(img.key).expiry > Date.now())) {
+        await refreshUrls();
+      }
+    };
 
-        const interval = setInterval(regenerateUrls, 30 * 60 * 1000); // 30 minutes
-        return () => clearInterval(interval);
-    }, [images, selectedImage, viewer]);
+    const interval = setInterval(regenerateUrls, 30 * 60 * 1000); // 30 minutes
+    return () => clearInterval(interval);
+  }, [images, selectedImage, viewer]);
 
   return (
     <div className="app-container">
@@ -306,7 +302,7 @@ const App = () => {
                   onChange={(rate) => handleRatingChange(selectedImage.id, rate)}
                 />
               </div>
-              <button className="exif-button" onClick={() => fetchExifData(selectedImage.url)}>View EXIF</button>
+              <button className="exif-button" onClick={() => fetchExifData(selectedImage.url)}>Show EXIF Data</button>
             </div>
           )}
           {exifData && (
