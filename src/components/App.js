@@ -306,7 +306,7 @@ const App = () => {
                   onChange={(rate) => handleRatingChange(selectedImage.id, rate)}
                 />
               </div>
-              <button className="exif-button" onClick={() => fetchExifData(selectedImage.url)}>Show EXIF Data</button>
+              <button className="exif-button" onClick={() => fetchExifData(selectedImage.url)}>View EXIF</button>
             </div>
           )}
           {exifData && (
