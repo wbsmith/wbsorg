@@ -5,7 +5,7 @@ import { uploadData, getUrl, list } from 'aws-amplify/storage';
 import Filmstrip from './Filmstrip';
 import EXIF from 'exif-js';
 import Rating from 'react-rating';
-import './styles/index.css'; // Import the updated CSS file
+import '/src/styles/index.css'; // Import the updated CSS file
 
 console.log('Amplify available?:', !!Amplify);
 console.log('Storage methods available?:', !!list, !!getUrl);
@@ -302,7 +302,7 @@ const App = () => {
                   onChange={(rate) => handleRatingChange(selectedImage.id, rate)}
                 />
               </div>
-              <button className="exif-button" onClick={() => fetchExifData(selectedImage.url)}>Show EXIF Data</button>
+              <button className="exif-button" onClick={() => fetchExifData(selectedImage.url)}>View EXIF</button>
             </div>
           )}
           {exifData && (
