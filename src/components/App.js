@@ -301,8 +301,8 @@ const App = () => {
               <div className="rating-container">
                 <Rating
                   initialRating={ratings[selectedImage.id] || 0}
-                  emptySymbol="☆"
-                  fullSymbol="★"
+                  emptySymbol={<span className="rating-star">☆</span>}
+                  fullSymbol={<span className="rating-star">★</span>}
                   onChange={(rate) => handleRatingChange(selectedImage.id, rate)}
                 />
               </div>
