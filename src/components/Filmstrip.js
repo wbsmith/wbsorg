@@ -3,109 +3,63 @@ import { throttle } from 'lodash'; // Using throttle instead of debounce for smo
 
 const Filmstrip = forwardRef(({ images, selectedImage, onImageSelect, isLoading }, outerRef) => {
     const scrollRef = useRef(null);
-    const selectedImageRef = useRef(selectedImage); // Track selected image
     const [loadingThumbnails, setLoadingThumbnails] = useState({});
     const [thumbnailErrors, setThumbnailErrors] = useState({});
     const [isScrolling, setIsScrolling] = useState(false);
-    const scrollAnimationRef = useRef(null);
-    const keyPressTimerRef = useRef(null);
-
-    // Update selectedImageRef whenever selectedImage changes
-    useEffect(() => {
-        selectedImageRef.current = selectedImage;
-        
-        // When selected image changes, ensure it's visible in the filmstrip
-        if (selectedImage && !isScrolling) {
-            centerSelectedThumbnail(false); // Don't force scroll if already in view
-        }
-    }, [selectedImage]);
+    const scrollTimeoutRef = useRef(null);
 
     // Share scrollRef with parent through forwardRef
     useImperativeHandle(outerRef, () => ({
         getScrollPosition: () => scrollRef.current?.scrollLeft || 0,
         setScrollPosition: (position) => {
             if (scrollRef.current) {
-                // Use smooth animation for manual scroll position setting
-                smoothScrollTo(position, 300);
+                scrollRef.current.scrollLeft = position;
             }
         }
     }));
 
-    // Smooth scroll function with animation frame for better performance
-    const smoothScrollTo = useCallback((targetPosition, duration = 300) => {
-        if (!scrollRef.current) return;
-        
-        // Cancel any existing animation
-        if (scrollAnimationRef.current) {
-            cancelAnimationFrame(scrollAnimationRef.current);
-        }
-        
-        const startPosition = scrollRef.current.scrollLeft;
-        const distance = targetPosition - startPosition;
-        const startTime = performance.now();
-        
-        setIsScrolling(true);
-        
-        const animateScroll = (currentTime) => {
-            const elapsedTime = currentTime - startTime;
-            if (elapsedTime >= duration) {
-                scrollRef.current.scrollLeft = targetPosition;
-                setIsScrolling(false);
-                return;
-            }
-            
-            // Easing function for smoother motion
-            const progress = elapsedTime / duration;
-            const easeProgress = 0.5 - Math.cos(progress * Math.PI) / 2; // Sine easing
-            
-            scrollRef.current.scrollLeft = startPosition + distance * easeProgress;
-            scrollAnimationRef.current = requestAnimationFrame(animateScroll);
-        };
-        
-        scrollAnimationRef.current = requestAnimationFrame(animateScroll);
-    }, []);
-
-    // Center the selected thumbnail in view
-    const centerSelectedThumbnail = useCallback((forceScroll = true) => {
-        if (!selectedImageRef.current || !scrollRef.current) return;
+    // Ensure selected image is visible in the filmstrip
+    const ensureSelectedVisible = useCallback(() => {
+        if (!selectedImage || !scrollRef.current) return;
         
         const thumbnailElement = scrollRef.current.querySelector(
-            `[data-image-id="${selectedImageRef.current.id}"]`
+            `[data-image-id="${selectedImage.id}"]`
         );
         
         if (!thumbnailElement) return;
         
         const container = scrollRef.current;
-        const containerWidth = container.clientWidth;
-        const elementOffset = thumbnailElement.offsetLeft;
-        const elementWidth = thumbnailElement.offsetWidth;
-        const scrollPosition = elementOffset - (containerWidth - elementWidth) / 2;
+        const containerLeft = container.scrollLeft;
+        const containerRight = containerLeft + container.clientWidth;
+        const elementLeft = thumbnailElement.offsetLeft;
+        const elementRight = elementLeft + thumbnailElement.offsetWidth;
         
-        // Check if the thumbnail is already fully visible
-        const isVisible = 
-            elementOffset >= container.scrollLeft && 
-            elementOffset + elementWidth <= container.scrollLeft + containerWidth;
-            
-        // Only scroll if forced or if the thumbnail isn't fully visible
-        if (forceScroll || !isVisible) {
-            smoothScrollTo(scrollPosition);
+        // Only scroll if the thumbnail is not fully visible
+        if (elementLeft < containerLeft || elementRight > containerRight) {
+            // Center the thumbnail
+            const newScrollPosition = elementLeft - (container.clientWidth - thumbnailElement.offsetWidth) / 2;
+            container.scrollTo({
+                left: newScrollPosition,
+                behavior: 'smooth'
+            });
         }
-    }, [smoothScrollTo]);
+    }, [selectedImage]);
 
-    // Improved scroll handler
-    const handleScroll = useCallback((direction) => {
-        if (!scrollRef.current || isScrolling) return;
+    // Effect to scroll to selected image when it changes
+    useEffect(() => {
+        ensureSelectedVisible();
+    }, [selectedImage, ensureSelectedVisible]);
+
+    // Button scroll handler
+    const handleButtonScroll = useCallback((direction) => {
+        if (!scrollRef.current) return;
         
-        const currentScroll = scrollRef.current.scrollLeft;
-        const containerWidth = scrollRef.current.clientWidth;
-        const scrollAmount = containerWidth * 0.8; // 80% of visible width for better context
-        
-        const targetScroll = direction === 'left' 
-            ? Math.max(0, currentScroll - scrollAmount)
-            : currentScroll + scrollAmount;
-            
-        smoothScrollTo(targetScroll);
-    }, [smoothScrollTo, isScrolling]);
+        const scrollAmount = direction === 'left' ? -300 : 300;
+        scrollRef.current.scrollBy({
+            left: scrollAmount,
+            behavior: 'smooth'
+        });
+    }, []);
 
     const handleThumbnailError = useCallback((imageId) => {
         console.error(`Thumbnail failed to load for image ${imageId}`);
@@ -126,82 +80,52 @@ const Filmstrip = forwardRef(({ images, selectedImage, onImageSelect, isLoading 
         });
     }, []);
 
-    // Improved keyboard navigation
+    // Direct keyboard handler (no debounce or throttle) for immediate response
     const handleKeyDown = useCallback((e) => {
         if (!images.length || isScrolling) return;
 
         // Prevent default for arrow keys to avoid page scrolling
         if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
             e.preventDefault();
+        } else {
+            return; // Only handle arrow keys
         }
 
-        const currentIndex = images.findIndex((img) => img.id === selectedImageRef.current?.id);
-        let newIndex = currentIndex;
-
-        switch (e.key) {
-            case 'ArrowLeft':
-                newIndex = Math.max(0, currentIndex - 1);
-                break;
-            case 'ArrowRight':
-                newIndex = Math.min(images.length - 1, currentIndex + 1);
-                break;
-            default:
-                return;
+        const currentIndex = images.findIndex((img) => img.id === selectedImage?.id);
+        if (currentIndex === -1) return;
+        
+        let newIndex;
+        if (e.key === 'ArrowLeft') {
+            newIndex = Math.max(0, currentIndex - 1);
+        } else { // ArrowRight
+            newIndex = Math.min(images.length - 1, currentIndex + 1);
         }
-
+        
         if (newIndex !== currentIndex) {
-            // We're changing the selected image
+            // Select the new image immediately
             onImageSelect(images[newIndex]);
             
-            // Clear any existing timer
-            if (keyPressTimerRef.current) {
-                clearTimeout(keyPressTimerRef.current);
+            // Set a small timeout to avoid continuous scrolling while pressing key
+            setIsScrolling(true);
+            if (scrollTimeoutRef.current) {
+                clearTimeout(scrollTimeoutRef.current);
             }
-            
-            // Set a short delay to allow the state to update before scrolling
-            keyPressTimerRef.current = setTimeout(() => {
-                centerSelectedThumbnail(true);
-                keyPressTimerRef.current = null;
-            }, 10);
+            scrollTimeoutRef.current = setTimeout(() => {
+                setIsScrolling(false);
+                scrollTimeoutRef.current = null;
+            }, 100);
         }
-    }, [images, onImageSelect, isScrolling, centerSelectedThumbnail]);
-
-    // Use throttle instead of debounce for smoother, more responsive controls
-    const throttledKeyDown = useCallback(throttle(handleKeyDown, 100, { leading: true, trailing: false }), [handleKeyDown]);
+    }, [images, selectedImage, onImageSelect, isScrolling]);
 
     useEffect(() => {
-        const keyDownHandler = (e) => {
-            throttledKeyDown(e);
-        };
-
-        window.addEventListener('keydown', keyDownHandler);
-
+        window.addEventListener('keydown', handleKeyDown);
         return () => {
-            window.removeEventListener('keydown', keyDownHandler);
-            throttledKeyDown.cancel();
-            
-            // Clean up any animations or timers
-            if (scrollAnimationRef.current) {
-                cancelAnimationFrame(scrollAnimationRef.current);
-            }
-            if (keyPressTimerRef.current) {
-                clearTimeout(keyPressTimerRef.current);
+            window.removeEventListener('keydown', handleKeyDown);
+            if (scrollTimeoutRef.current) {
+                clearTimeout(scrollTimeoutRef.current);
             }
         };
-    }, [throttledKeyDown]);
-    
-    // Listen for scroll end to reset scrolling state
-    useEffect(() => {
-        const handleScrollEnd = throttle(() => {
-            setIsScrolling(false);
-        }, 150);
-        
-        const scrollElement = scrollRef.current;
-        if (scrollElement) {
-            scrollElement.addEventListener('scroll', handleScrollEnd);
-            return () => scrollElement.removeEventListener('scroll', handleScrollEnd);
-        }
-    }, []);
+    }, [handleKeyDown]);
 
     // Reset error state for any images when they change
     useEffect(() => {
@@ -224,7 +148,7 @@ const Filmstrip = forwardRef(({ images, selectedImage, onImageSelect, isLoading 
         <div className="filmstrip-container">
             <button
                 className="scroll-button left"
-                onClick={() => handleScroll('left')}
+                onClick={() => handleButtonScroll('left')}
                 aria-label="Scroll left"
             >
                 ‹
@@ -275,7 +199,7 @@ const Filmstrip = forwardRef(({ images, selectedImage, onImageSelect, isLoading 
 
             <button
                 className="scroll-button right"
-                onClick={() => handleScroll('right')}
+                onClick={() => handleButtonScroll('right')}
                 aria-label="Scroll right"
             >
                 ›
