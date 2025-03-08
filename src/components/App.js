@@ -21,15 +21,13 @@ const App = () => {
   const [exifData, setExifData] = React.useState(null);
   const [ratings, setRatings] = React.useState({});
   const [errorMessage, setErrorMessage] = React.useState(null);
-  const [imageDimensions, setImageDimensions] = React.useState({ width: 0, height: 0 });
-  const [containerWidth, setContainerWidth] = React.useState(0);
+  const [imageDimensions, setImageDimensions] = React.useState(null);
   const filmstripRef = React.useRef(null);
-  const lastScrollPositionRef = React.useRef(0);
   const urlCache = React.useRef(new Map()); // Cache URLs
   const urlRefreshQueue = React.useRef(new Set()); // Queue of URLs to refresh
   const viewerContainerRef = React.useRef(null);
   const viewerRef = React.useRef(null);
-  const dimensionsLoadedRef = React.useRef(false);
+  const aspectRatioUpdateTimeoutRef = React.useRef(null);
 
   // Simple debounce function
   const debounce = (func, wait) => {
@@ -41,7 +39,7 @@ const App = () => {
   };
 
   // Function to get image dimensions
-  const getImageDimensions = (imageUrl) => {
+  const getImageDimensions = React.useCallback((imageUrl) => {
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => {
@@ -57,54 +55,46 @@ const App = () => {
       img.src = imageUrl;
       img.crossOrigin = 'anonymous';
     });
-  };
+  }, []);
 
-  // Function to adjust viewer container based on image dimensions
-  const adjustViewerContainer = React.useCallback(() => {
-    if (!viewerContainerRef.current || !imageDimensions.width || !imageDimensions.height) return;
+  // Adjust viewer container dimensions without affecting filmstrip
+  const updateViewerDimensions = React.useCallback(() => {
+    if (!viewerContainerRef.current || !imageDimensions) return;
     
-    // Use the full available width from parent element
     const parentWidth = viewerContainerRef.current.parentElement.clientWidth;
-    setContainerWidth(parentWidth);
+    const aspectRatio = imageDimensions.aspectRatio || 1.5; // Default if unavailable
     
-    // Calculate height based on aspect ratio, with a maximum height limit
-    const aspectRatio = imageDimensions.width / imageDimensions.height;
-    let calculatedHeight = parentWidth / aspectRatio;
+    // Calculate height with a maximum limit
+    const maxHeight = Math.min(window.innerHeight * 0.7, 800); // 70% of viewport height or 800px
+    const calculatedHeight = Math.min(parentWidth / aspectRatio, maxHeight);
     
-    // Limit maximum height if needed (adjust the 800 value as needed)
-    const maxHeight = window.innerHeight * 0.7; // 70% of viewport height
-    calculatedHeight = Math.min(calculatedHeight, maxHeight);
-    
-    // Apply dimensions to container
-    viewerContainerRef.current.style.width = `${parentWidth}px`;
     viewerContainerRef.current.style.height = `${calculatedHeight}px`;
     
-    // Notify the viewer of the resize
+    // Notify viewer to resize
     if (viewerRef.current) {
-      setTimeout(() => {
-        viewerRef.current.viewport.goHome(true);
-        viewerRef.current.forceResize();
-      }, 100);
+      viewerRef.current.forceResize();
     }
   }, [imageDimensions]);
 
-  // Add resize listener
+  // Handle window resize
   React.useEffect(() => {
     const handleResize = debounce(() => {
-      adjustViewerContainer();
-    }, 200);
+      updateViewerDimensions();
+    }, 100);
     
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [adjustViewerContainer]);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      if (aspectRatioUpdateTimeoutRef.current) {
+        clearTimeout(aspectRatioUpdateTimeoutRef.current);
+      }
+    };
+  }, [updateViewerDimensions]);
 
-  // Adjust container when dimensions change
+  // Update dimensions when image changes
   React.useEffect(() => {
-    if (imageDimensions.width && imageDimensions.height) {
-      adjustViewerContainer();
-      dimensionsLoadedRef.current = true;
-    }
-  }, [imageDimensions, adjustViewerContainer]);
+    updateViewerDimensions();
+  }, [imageDimensions, updateViewerDimensions]);
 
   const getPreSignedUrl = async (key, retryCount = 0, forceRefresh = false) => {
     // Check cache first (unless force refresh is requested)
@@ -156,10 +146,7 @@ const App = () => {
 
     try {
       // Save scroll position
-      if (filmstripRef.current) {
-        lastScrollPositionRef.current = filmstripRef.current.getScrollPosition() || 0;
-      }
-      
+      const scrollPosition = filmstripRef.current?.getScrollPosition() || 0;
       const batchSize = 5;
       const updatedImages = [...images]; // Create a copy to modify
 
@@ -230,12 +217,8 @@ const App = () => {
         }
       }
 
-      // Restore scroll position
-      if (filmstripRef.current && lastScrollPositionRef.current) {
-        setTimeout(() => {
-          filmstripRef.current.setScrollPosition(lastScrollPositionRef.current);
-        }, 100);
-      }
+      // Restore scroll position (no need for delay as we're not causing a rerender of filmstrip)
+      filmstripRef.current?.setScrollPosition(scrollPosition);
 
     } catch (error) {
       console.error('Error refreshing URLs:', error);
@@ -246,77 +229,65 @@ const App = () => {
   };
 
   const handleImageSelect = React.useCallback(async (image) => {
-    // Save filmstrip scroll position before changing images
-    if (filmstripRef.current) {
-      lastScrollPositionRef.current = filmstripRef.current.getScrollPosition() || 0;
-    }
-    
     setSelectedImage(image);
     setErrorMessage(null); // Clear any previous error messages
     
-    try {
-      // Check if URL might be stale and refresh if needed
-      let imageUrl = image.url;
-      if (urlCache.current.has(image.key)) {
-        const { expiry } = urlCache.current.get(image.key);
-        if (expiry < Date.now() + 10 * 60 * 1000) { // Less than 10 minutes left
-          imageUrl = await getPreSignedUrl(image.key, 0, true);
-          // Update image in state with new URL
-          image = {...image, url: imageUrl};
-          setSelectedImage(image);
+    if (viewerRef.current) {
+      try {
+        // Check if URL might be stale and refresh if needed
+        let imageUrl = image.url;
+        if (urlCache.current.has(image.key)) {
+          const { expiry } = urlCache.current.get(image.key);
+          if (expiry < Date.now() + 10 * 60 * 1000) { // Less than 10 minutes left
+            imageUrl = await getPreSignedUrl(image.key, 0, true);
+            // Update image in state with new URL
+            setSelectedImage(prev => prev && prev.id === image.id ? {...prev, url: imageUrl} : prev);
+          }
         }
-      }
-      
-      // Get image dimensions first
-      setIsLoading(true);
-      const dimensions = await getImageDimensions(imageUrl);
-      setImageDimensions(dimensions);
-      
-      // Then open image in viewer after dimensions are set
-      if (viewerRef.current) {
+        
+        // Get image dimensions in the background
+        getImageDimensions(imageUrl).then(dimensions => {
+          setImageDimensions(dimensions);
+        }).catch(err => {
+          console.error('Error getting image dimensions:', err);
+        });
+        
+        // Open image in viewer immediately, don't wait for dimensions
         viewerRef.current.open({
           type: 'image',
           url: imageUrl,
           crossOriginPolicy: 'Anonymous',
           buildPyramid: false,
         });
-      }
-    } catch (error) {
-      console.error('Error opening image:', error);
-      setErrorMessage('Failed to load the selected image. Please try again later.');
-      
-      // Try to recover
-      try {
-        const newUrl = await getPreSignedUrl(image.key, 0, true);
-        const updatedImage = { ...image, url: newUrl };
-        setSelectedImage(updatedImage);
+      } catch (error) {
+        console.error('Error opening image:', error);
+        setErrorMessage('Failed to load the selected image. Please try again later.');
         
-        const dimensions = await getImageDimensions(newUrl);
-        setImageDimensions(dimensions);
-        
-        if (viewerRef.current) {
+        // Try to recover
+        try {
+          const newUrl = await getPreSignedUrl(image.key, 0, true);
+          const updatedImage = { ...image, url: newUrl };
+          setSelectedImage(updatedImage);
+          
+          getImageDimensions(newUrl).then(dimensions => {
+            setImageDimensions(dimensions);
+          }).catch(err => {
+            console.error('Error getting image dimensions during recovery:', err);
+          });
+          
           viewerRef.current.open({
             type: 'image',
             url: newUrl,
             crossOriginPolicy: 'Anonymous',
             buildPyramid: false,
           });
+        } catch (retryError) {
+          console.error('Retry failed:', retryError);
+          setErrorMessage('Failed to load the image. Please select another image or refresh the page.');
         }
-      } catch (retryError) {
-        console.error('Retry failed:', retryError);
-        setErrorMessage('Failed to load the image. Please select another image or refresh the page.');
-      }
-    } finally {
-      setIsLoading(false);
-      
-      // Restore filmstrip scroll position
-      if (filmstripRef.current && lastScrollPositionRef.current) {
-        setTimeout(() => {
-          filmstripRef.current.setScrollPosition(lastScrollPositionRef.current);
-        }, 50);
       }
     }
-  }, []);
+  }, [getImageDimensions]);
 
   const fetchExifData = (imageUrl) => {
     const img = new Image();
@@ -349,22 +320,23 @@ const App = () => {
       await refreshUrls();
       
       // If we have a selected image, try reloading it
-      if (selectedImage) {
+      if (selectedImage && viewerRef.current) {
         const newUrl = await getPreSignedUrl(selectedImage.key, 0, true);
         const updatedImage = { ...selectedImage, url: newUrl };
         setSelectedImage(updatedImage);
         
-        const dimensions = await getImageDimensions(newUrl);
-        setImageDimensions(dimensions);
+        getImageDimensions(newUrl).then(dimensions => {
+          setImageDimensions(dimensions);
+        }).catch(err => {
+          console.error('Error getting image dimensions during recovery:', err);
+        });
         
-        if (viewerRef.current) {
-          viewerRef.current.open({
-            type: 'image',
-            url: newUrl,
-            crossOriginPolicy: 'Anonymous',
-            buildPyramid: false,
-          });
-        }
+        viewerRef.current.open({
+          type: 'image',
+          url: newUrl,
+          crossOriginPolicy: 'Anonymous',
+          buildPyramid: false,
+        });
       }
       
       setErrorMessage(null);
@@ -412,11 +384,6 @@ const App = () => {
 
     fetchImages();
 
-    // Initial container width setup
-    if (viewerContainerRef.current) {
-      setContainerWidth(viewerContainerRef.current.parentElement.clientWidth);
-    }
-
     const viewer = OpenSeadragon({
       id: 'openseadragon-viewer',
       prefixUrl: 'https://cdn.jsdelivr.net/npm/openseadragon@3.1/build/openseadragon/images/',
@@ -443,11 +410,8 @@ const App = () => {
     });
 
     viewer.addHandler('open', function() {
-      // Ensure proper fitting when an image opens
-      setTimeout(() => {
-        viewer.viewport.goHome(true);
-        viewer.forceResize();
-      }, 200);
+      // Make sure the image is properly displayed
+      viewer.viewport.goHome(true);
     });
 
     viewer.addHandler('tile-load-failed', async (event) => {
@@ -538,7 +502,7 @@ const App = () => {
     return () => {
       viewer.destroy();
     };
-  }, []);
+  }, [getImageDimensions]);
 
   React.useEffect(() => {
     if (viewerRef.current && images.length > 0 && !selectedImage) {
@@ -586,9 +550,10 @@ const App = () => {
             ref={viewerContainerRef}
             style={{
               width: '100%',
-              height: imageDimensions.height && imageDimensions.width
-                ? `${Math.min(containerWidth / imageDimensions.aspectRatio, window.innerHeight * 0.7)}px`
-                : '600px', // Default height if no image is loaded
+              height: imageDimensions ? `${Math.min(
+                (viewerContainerRef.current?.parentElement.clientWidth || window.innerWidth) / imageDimensions.aspectRatio,
+                window.innerHeight * 0.7
+              )}px` : '600px',
               margin: '0 auto',
               backgroundColor: '#000',
               transition: 'height 0.3s ease-in-out'
@@ -605,7 +570,7 @@ const App = () => {
                 />
               </div>
               <button className="exif-button" onClick={() => fetchExifData(selectedImage.url)}>View EXIF</button>
-              {imageDimensions.width > 0 && (
+              {imageDimensions && (
                 <span className="image-dimensions">
                   {imageDimensions.width} × {imageDimensions.height}
                 </span>
