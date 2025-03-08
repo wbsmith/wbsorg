@@ -1,13 +1,11 @@
 import React, { forwardRef, useRef, useImperativeHandle, useEffect, useCallback, useState } from 'react';
-import { throttle } from 'lodash'; // Using throttle instead of debounce for smoother interaction
+import { debounce } from 'lodash';
 
 const Filmstrip = forwardRef(({ images, selectedImage, onImageSelect, isLoading }, outerRef) => {
     const scrollRef = useRef(null);
     const [loadingThumbnails, setLoadingThumbnails] = useState({});
     const [thumbnailErrors, setThumbnailErrors] = useState({});
-    const [isScrolling, setIsScrolling] = useState(false);
-    const scrollTimeoutRef = useRef(null);
-
+    
     // Share scrollRef with parent through forwardRef
     useImperativeHandle(outerRef, () => ({
         getScrollPosition: () => scrollRef.current?.scrollLeft || 0,
@@ -18,47 +16,12 @@ const Filmstrip = forwardRef(({ images, selectedImage, onImageSelect, isLoading 
         }
     }));
 
-    // Ensure selected image is visible in the filmstrip
-    const ensureSelectedVisible = useCallback(() => {
-        if (!selectedImage || !scrollRef.current) return;
-        
-        const thumbnailElement = scrollRef.current.querySelector(
-            `[data-image-id="${selectedImage.id}"]`
-        );
-        
-        if (!thumbnailElement) return;
-        
-        const container = scrollRef.current;
-        const containerLeft = container.scrollLeft;
-        const containerRight = containerLeft + container.clientWidth;
-        const elementLeft = thumbnailElement.offsetLeft;
-        const elementRight = elementLeft + thumbnailElement.offsetWidth;
-        
-        // Only scroll if the thumbnail is not fully visible
-        if (elementLeft < containerLeft || elementRight > containerRight) {
-            // Center the thumbnail
-            const newScrollPosition = elementLeft - (container.clientWidth - thumbnailElement.offsetWidth) / 2;
-            container.scrollTo({
-                left: newScrollPosition,
-                behavior: 'smooth'
-            });
-        }
-    }, [selectedImage]);
-
-    // Effect to scroll to selected image when it changes
-    useEffect(() => {
-        ensureSelectedVisible();
-    }, [selectedImage, ensureSelectedVisible]);
-
-    // Button scroll handler
+    // Button scroll handler - simplified
     const handleButtonScroll = useCallback((direction) => {
         if (!scrollRef.current) return;
         
         const scrollAmount = direction === 'left' ? -300 : 300;
-        scrollRef.current.scrollBy({
-            left: scrollAmount,
-            behavior: 'smooth'
-        });
+        scrollRef.current.scrollLeft += scrollAmount;
     }, []);
 
     const handleThumbnailError = useCallback((imageId) => {
@@ -80,50 +43,61 @@ const Filmstrip = forwardRef(({ images, selectedImage, onImageSelect, isLoading 
         });
     }, []);
 
-    // Direct keyboard handler (no debounce or throttle) for immediate response
+    // Simplified keyboard handler with no debounce
     const handleKeyDown = useCallback((e) => {
-        if (!images.length || isScrolling) return;
-
-        // Prevent default for arrow keys to avoid page scrolling
-        if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-            e.preventDefault();
-        } else {
-            return; // Only handle arrow keys
-        }
-
-        const currentIndex = images.findIndex((img) => img.id === selectedImage?.id);
+        if (!images.length) return;
+        
+        // Only handle arrow keys
+        if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+        
+        // Prevent default scrolling
+        e.preventDefault();
+        
+        // Find current index
+        const currentIndex = images.findIndex(img => img.id === selectedImage?.id);
         if (currentIndex === -1) return;
         
-        let newIndex;
+        // Determine new index
+        let newIndex = currentIndex;
         if (e.key === 'ArrowLeft') {
             newIndex = Math.max(0, currentIndex - 1);
-        } else { // ArrowRight
+        } else if (e.key === 'ArrowRight') {
             newIndex = Math.min(images.length - 1, currentIndex + 1);
         }
         
+        // Only update if changed
         if (newIndex !== currentIndex) {
-            // Select the new image immediately
+            // Actually select the new image
             onImageSelect(images[newIndex]);
             
-            // Set a small timeout to avoid continuous scrolling while pressing key
-            setIsScrolling(true);
-            if (scrollTimeoutRef.current) {
-                clearTimeout(scrollTimeoutRef.current);
-            }
-            scrollTimeoutRef.current = setTimeout(() => {
-                setIsScrolling(false);
-                scrollTimeoutRef.current = null;
-            }, 100);
+            // Make the selected thumbnail visible after a short delay
+            // to let the selection update first
+            setTimeout(() => {
+                const thumbnailElement = scrollRef.current?.querySelector(`[data-image-id="${images[newIndex].id}"]`);
+                if (thumbnailElement && scrollRef.current) {
+                    // Calculate if the element is visible
+                    const container = scrollRef.current;
+                    const containerLeft = container.scrollLeft;
+                    const containerRight = containerLeft + container.clientWidth;
+                    const elementLeft = thumbnailElement.offsetLeft;
+                    const elementRight = elementLeft + thumbnailElement.offsetWidth;
+                    
+                    // Only scroll if not fully visible
+                    if (elementLeft < containerLeft || elementRight > containerRight) {
+                        // Center the element
+                        const newScrollPosition = elementLeft - (container.clientWidth - thumbnailElement.offsetWidth) / 2;
+                        container.scrollLeft = newScrollPosition;
+                    }
+                }
+            }, 50);
         }
-    }, [images, selectedImage, onImageSelect, isScrolling]);
+    }, [images, selectedImage, onImageSelect]);
 
+    // Set up keyboard handler
     useEffect(() => {
         window.addEventListener('keydown', handleKeyDown);
         return () => {
             window.removeEventListener('keydown', handleKeyDown);
-            if (scrollTimeoutRef.current) {
-                clearTimeout(scrollTimeoutRef.current);
-            }
         };
     }, [handleKeyDown]);
 
