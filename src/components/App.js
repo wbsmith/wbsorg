@@ -24,10 +24,21 @@ const App = () => {
   const [imageDimensions, setImageDimensions] = React.useState({ width: 0, height: 0 });
   const [containerWidth, setContainerWidth] = React.useState(0);
   const filmstripRef = React.useRef(null);
+  const lastScrollPositionRef = React.useRef(0);
   const urlCache = React.useRef(new Map()); // Cache URLs
   const urlRefreshQueue = React.useRef(new Set()); // Queue of URLs to refresh
   const viewerContainerRef = React.useRef(null);
   const viewerRef = React.useRef(null);
+  const dimensionsLoadedRef = React.useRef(false);
+
+  // Simple debounce function
+  const debounce = (func, wait) => {
+    let timeout;
+    return function(...args) {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+  };
 
   // Function to get image dimensions
   const getImageDimensions = (imageUrl) => {
@@ -52,22 +63,28 @@ const App = () => {
   const adjustViewerContainer = React.useCallback(() => {
     if (!viewerContainerRef.current || !imageDimensions.width || !imageDimensions.height) return;
     
-    // Use the full available width
-    const maxWidth = viewerContainerRef.current.parentElement.clientWidth;
-    setContainerWidth(maxWidth);
+    // Use the full available width from parent element
+    const parentWidth = viewerContainerRef.current.parentElement.clientWidth;
+    setContainerWidth(parentWidth);
     
-    // Calculate height based on aspect ratio
+    // Calculate height based on aspect ratio, with a maximum height limit
     const aspectRatio = imageDimensions.width / imageDimensions.height;
-    const calculatedHeight = maxWidth / aspectRatio;
+    let calculatedHeight = parentWidth / aspectRatio;
+    
+    // Limit maximum height if needed (adjust the 800 value as needed)
+    const maxHeight = window.innerHeight * 0.7; // 70% of viewport height
+    calculatedHeight = Math.min(calculatedHeight, maxHeight);
     
     // Apply dimensions to container
-    viewerContainerRef.current.style.width = `${maxWidth}px`;
+    viewerContainerRef.current.style.width = `${parentWidth}px`;
     viewerContainerRef.current.style.height = `${calculatedHeight}px`;
     
     // Notify the viewer of the resize
     if (viewerRef.current) {
-      viewerRef.current.viewport.goHome(true);
-      viewerRef.current.forceResize();
+      setTimeout(() => {
+        viewerRef.current.viewport.goHome(true);
+        viewerRef.current.forceResize();
+      }, 100);
     }
   }, [imageDimensions]);
 
@@ -83,7 +100,10 @@ const App = () => {
 
   // Adjust container when dimensions change
   React.useEffect(() => {
-    adjustViewerContainer();
+    if (imageDimensions.width && imageDimensions.height) {
+      adjustViewerContainer();
+      dimensionsLoadedRef.current = true;
+    }
   }, [imageDimensions, adjustViewerContainer]);
 
   const getPreSignedUrl = async (key, retryCount = 0, forceRefresh = false) => {
@@ -136,7 +156,10 @@ const App = () => {
 
     try {
       // Save scroll position
-      const scrollPosition = filmstripRef.current?.getScrollPosition() || 0;
+      if (filmstripRef.current) {
+        lastScrollPositionRef.current = filmstripRef.current.getScrollPosition() || 0;
+      }
+      
       const batchSize = 5;
       const updatedImages = [...images]; // Create a copy to modify
 
@@ -178,8 +201,8 @@ const App = () => {
           const updatedSelected = { ...selectedImage, url: newUrl };
           setSelectedImage(updatedSelected);
 
-          if (viewer) {
-            viewer.open({
+          if (viewerRef.current) {
+            viewerRef.current.open({
               type: 'image',
               url: newUrl,
               crossOriginPolicy: 'Anonymous',
@@ -208,7 +231,11 @@ const App = () => {
       }
 
       // Restore scroll position
-      filmstripRef.current?.setScrollPosition(scrollPosition);
+      if (filmstripRef.current && lastScrollPositionRef.current) {
+        setTimeout(() => {
+          filmstripRef.current.setScrollPosition(lastScrollPositionRef.current);
+        }, 100);
+      }
 
     } catch (error) {
       console.error('Error refreshing URLs:', error);
@@ -219,6 +246,11 @@ const App = () => {
   };
 
   const handleImageSelect = React.useCallback(async (image) => {
+    // Save filmstrip scroll position before changing images
+    if (filmstripRef.current) {
+      lastScrollPositionRef.current = filmstripRef.current.getScrollPosition() || 0;
+    }
+    
     setSelectedImage(image);
     setErrorMessage(null); // Clear any previous error messages
     
@@ -240,7 +272,7 @@ const App = () => {
       const dimensions = await getImageDimensions(imageUrl);
       setImageDimensions(dimensions);
       
-      // Then open image in viewer
+      // Then open image in viewer after dimensions are set
       if (viewerRef.current) {
         viewerRef.current.open({
           type: 'image',
@@ -276,6 +308,13 @@ const App = () => {
       }
     } finally {
       setIsLoading(false);
+      
+      // Restore filmstrip scroll position
+      if (filmstripRef.current && lastScrollPositionRef.current) {
+        setTimeout(() => {
+          filmstripRef.current.setScrollPosition(lastScrollPositionRef.current);
+        }, 50);
+      }
     }
   }, []);
 
@@ -335,15 +374,6 @@ const App = () => {
     }
   };
 
-  // Simple debounce function
-  const debounce = (func, wait) => {
-    let timeout;
-    return function(...args) {
-      clearTimeout(timeout);
-      timeout = setTimeout(() => func.apply(this, args), wait);
-    };
-  };
-
   React.useEffect(() => {
     const fetchImages = async () => {
       try {
@@ -382,6 +412,11 @@ const App = () => {
 
     fetchImages();
 
+    // Initial container width setup
+    if (viewerContainerRef.current) {
+      setContainerWidth(viewerContainerRef.current.parentElement.clientWidth);
+    }
+
     const viewer = OpenSeadragon({
       id: 'openseadragon-viewer',
       prefixUrl: 'https://cdn.jsdelivr.net/npm/openseadragon@3.1/build/openseadragon/images/',
@@ -405,6 +440,14 @@ const App = () => {
       timeout: 120000,
       autoResize: false, // We'll handle resizing manually
       preserveViewport: true, // Preserve zoom/pan when changing images
+    });
+
+    viewer.addHandler('open', function() {
+      // Ensure proper fitting when an image opens
+      setTimeout(() => {
+        viewer.viewport.goHome(true);
+        viewer.forceResize();
+      }, 200);
     });
 
     viewer.addHandler('tile-load-failed', async (event) => {
@@ -498,10 +541,10 @@ const App = () => {
   }, []);
 
   React.useEffect(() => {
-    if (viewer && images.length > 0 && !selectedImage) {
+    if (viewerRef.current && images.length > 0 && !selectedImage) {
       handleImageSelect(images[0]);
     }
-  }, [viewer, images, selectedImage, handleImageSelect]);
+  }, [images, selectedImage, handleImageSelect]);
 
   // Proactive URL refreshing
   React.useEffect(() => {
@@ -543,7 +586,9 @@ const App = () => {
             ref={viewerContainerRef}
             style={{
               width: '100%',
-              height: imageDimensions.height ? (containerWidth / imageDimensions.aspectRatio) : '600px',
+              height: imageDimensions.height && imageDimensions.width
+                ? `${Math.min(containerWidth / imageDimensions.aspectRatio, window.innerHeight * 0.7)}px`
+                : '600px', // Default height if no image is loaded
               margin: '0 auto',
               backgroundColor: '#000',
               transition: 'height 0.3s ease-in-out'
