@@ -23,55 +23,73 @@ const App = () => {
   const [errorMessage, setErrorMessage] = React.useState(null);
   const filmstripRef = React.useRef(null);
   const urlCache = React.useRef(new Map()); // Cache URLs
+  const urlRefreshQueue = React.useRef(new Set()); // Queue of URLs to refresh
 
-  const getPreSignedUrl = async (key, retryCount = 0) => {
-    // Check cache first
-    if (urlCache.current.has(key)) {
+  const getPreSignedUrl = async (key, retryCount = 0, forceRefresh = false) => {
+    // Check cache first (unless force refresh is requested)
+    if (!forceRefresh && urlCache.current.has(key)) {
       const { url, expiry } = urlCache.current.get(key);
-      if (expiry > Date.now()) {
+      // Return cached URL if it's not expiring soon (more than 5 minutes left)
+      if (expiry > Date.now() + 5 * 60 * 1000) {
         return url;
       }
+      // If URL is expiring soon, continue to refresh it
     }
 
     try {
-      console.log('Attempting to get URL for key:', key);
+      console.log('Getting new URL for key:', key);
       const result = await getUrl({ key, options: { expires: 60 * 60 } }); // 1-hour expiry
       const url = result.url.href;
 
-      // Cache the URL with expiry time
-      const expiry = Date.now() + (60 * 60 * 1000) - (5 * 60 * 1000); // Expire 5 minutes early
+      // Cache with expiry time (1 hour minus 10 minutes buffer for safety)
+      const expiry = Date.now() + (50 * 60 * 1000);
       urlCache.current.set(key, { url, expiry });
 
       return url;
     } catch (error) {
-      console.error('Error generating signed URL:', error);
+      console.error(`Error generating signed URL for ${key}:`, error);
+      
+      // Implement better backoff strategy
       if (error.message?.includes('Too Many Requests') && retryCount < 3) {
         const backoffTime = Math.pow(2, retryCount) * 1000;
-        console.log(`Rate limited, waiting ${backoffTime}ms before retry`);
+        console.log(`Rate limited, waiting ${backoffTime}ms before retry ${retryCount+1}/3`);
         await delay(backoffTime);
-        return getPreSignedUrl(key, retryCount + 1);
+        return getPreSignedUrl(key, retryCount + 1, forceRefresh);
       }
+      
+      // If we still have a cached URL, return it as fallback even if expired
+      if (urlCache.current.has(key)) {
+        console.log(`Using expired URL for ${key} as fallback`);
+        // Add to refresh queue to try again later
+        urlRefreshQueue.current.add(key);
+        return urlCache.current.get(key).url;
+      }
+      
       throw error;
     }
   };
 
-  const refreshUrls = async () => {
+  const refreshUrls = async (imagesToRefresh = images) => {
     if (isRefreshing) return;
     setIsRefreshing(true);
 
     try {
+      // Save scroll position
       const scrollPosition = filmstripRef.current?.getScrollPosition() || 0;
       const batchSize = 5;
       const updatedImages = [...images]; // Create a copy to modify
 
-      for (let i = 0; i < images.length; i += batchSize) {
-        const batch = images.slice(i, i + batchSize);
+      // Process in batches to avoid rate limiting
+      for (let i = 0; i < imagesToRefresh.length; i += batchSize) {
+        const batch = imagesToRefresh.slice(i, i + batchSize);
         await Promise.all(
           batch.map(async (image) => {
             try {
-              const fullImageUrl = await getPreSignedUrl(image.key);
-              const thumbnailUrl = await getPreSignedUrl(`thumbnails/${image.id}`);
-               // Find the index in the copied array
+              // Force refresh the URLs
+              const fullImageUrl = await getPreSignedUrl(image.key, 0, true);
+              const thumbnailUrl = await getPreSignedUrl(`thumbnails/${image.id}`, 0, true);
+              
+              // Update in our copied array
               const index = updatedImages.findIndex(img => img.id === image.id);
               if (index !== -1) {
                 updatedImages[index] = {
@@ -82,21 +100,20 @@ const App = () => {
               }
             } catch (error) {
               console.error(`Failed to refresh URLs for image ${image.id}:`, error);
-               const index = updatedImages.findIndex(img => img.id === image.id);
-                if (index !== -1) {
-                    updatedImages[index] = image; //Keep Old Image and URL if error.
-                }
+              // Don't update this image's URLs if refresh failed
             }
           })
         );
         await delay(200); // Shorter delay between batches
       }
 
-        setImages(updatedImages);
+      // Only update state if we have changes
+      setImages(updatedImages);
 
-      if (selectedImage) {
+      // Also refresh the selected image if it was in the batch
+      if (selectedImage && imagesToRefresh.some(img => img.id === selectedImage.id)) {
         try {
-          const newUrl = await getPreSignedUrl(selectedImage.key);
+          const newUrl = await getPreSignedUrl(selectedImage.key, 0, true);
           const updatedSelected = { ...selectedImage, url: newUrl };
           setSelectedImage(updatedSelected);
 
@@ -114,12 +131,27 @@ const App = () => {
         }
       }
 
-      // Restore scroll position (no need for requestAnimationFrame)
+      // Process any queued URLs that need refreshing
+      if (urlRefreshQueue.current.size > 0) {
+        console.log(`Processing ${urlRefreshQueue.current.size} queued URLs for refresh`);
+        const queuedKeys = [...urlRefreshQueue.current];
+        for (const key of queuedKeys) {
+          try {
+            await getPreSignedUrl(key, 0, true);
+            urlRefreshQueue.current.delete(key);
+          } catch (error) {
+            console.error(`Failed to refresh queued URL for key ${key}:`, error);
+            // Keep in queue for next attempt
+          }
+        }
+      }
+
+      // Restore scroll position
       filmstripRef.current?.setScrollPosition(scrollPosition);
 
     } catch (error) {
       console.error('Error refreshing URLs:', error);
-      setErrorMessage('Error refreshing URLs. Please try again later.');
+      setErrorMessage('Error refreshing image data. Please try again later.');
     } finally {
       setIsRefreshing(false);
     }
@@ -128,20 +160,47 @@ const App = () => {
   const handleImageSelect = React.useCallback(async (image) => {
     setSelectedImage(image);
     setErrorMessage(null); // Clear any previous error messages
+    
     if (viewer) {
       try {
-        // No need to pre-fetch. OpenSeadragon handles loading. Just open.
+        // Check if URL might be stale and refresh if needed
+        let imageUrl = image.url;
+        if (urlCache.current.has(image.key)) {
+          const { expiry } = urlCache.current.get(image.key);
+          if (expiry < Date.now() + 10 * 60 * 1000) { // Less than 10 minutes left
+            imageUrl = await getPreSignedUrl(image.key, 0, true);
+            // Update image in state with new URL
+            setSelectedImage(prev => prev && prev.id === image.id ? {...prev, url: imageUrl} : prev);
+          }
+        }
+        
+        // Open image in viewer
         viewer.open({
           type: 'image',
-          url: image.url,
+          url: imageUrl,
           crossOriginPolicy: 'Anonymous',
           buildPyramid: false,
         });
       } catch (error) {
-        console.error('Error in openImage:', error);
+        console.error('Error opening image:', error);
         setErrorMessage('Failed to load the selected image. Please try again later.');
-        await refreshUrls(); // Refresh URLs immediately
-        handleImageSelect(image); // Retry opening the image
+        
+        // Try to recover
+        try {
+          const newUrl = await getPreSignedUrl(image.key, 0, true);
+          const updatedImage = { ...image, url: newUrl };
+          setSelectedImage(updatedImage);
+          
+          viewer.open({
+            type: 'image',
+            url: newUrl,
+            crossOriginPolicy: 'Anonymous',
+            buildPyramid: false,
+          });
+        } catch (retryError) {
+          console.error('Retry failed:', retryError);
+          setErrorMessage('Failed to load the image. Please select another image or refresh the page.');
+        }
       }
     }
   }, [viewer]);
@@ -167,6 +226,34 @@ const App = () => {
     }));
     // Here you can add code to save the rating to your backend
     console.log(`Image ${imageId} rated ${rating}`);
+  };
+
+  const recoverFromError = async () => {
+    setErrorMessage('Attempting to recover...');
+    
+    try {
+      // First, try to refresh all URLs
+      await refreshUrls();
+      
+      // If we have a selected image, try reloading it
+      if (selectedImage && viewer) {
+        const newUrl = await getPreSignedUrl(selectedImage.key, 0, true);
+        const updatedImage = { ...selectedImage, url: newUrl };
+        setSelectedImage(updatedImage);
+        
+        viewer.open({
+          type: 'image',
+          url: newUrl,
+          crossOriginPolicy: 'Anonymous',
+          buildPyramid: false,
+        });
+      }
+      
+      setErrorMessage(null);
+    } catch (error) {
+      console.error('Recovery failed:', error);
+      setErrorMessage('Recovery failed. Please refresh the page.');
+    }
   };
 
   React.useEffect(() => {
@@ -228,29 +315,88 @@ const App = () => {
       showReferenceStrip: false,
       defaultZoomLevel: 0,
       timeout: 120000,
-        //Removed immediateRender.  Let OpenSeaDragon Handle Rendering.
+      // Removed immediateRender. Let OpenSeaDragon Handle Rendering.
     });
 
     viewer.addHandler('tile-load-failed', async (event) => {
       console.warn('Tile load failed:', event);
-      // Don't prevent default. OSD needs to know the tile failed.
-      // Instead, refresh URLs *without* blocking the main thread.
-      await refreshUrls(); // Use `await` here to ensure URLs are refreshed before retrying.
-      viewer.open(event.place); // Retry opening the image.
+      
+      // Try to get the image key from the event
+      if (selectedImage) {
+        try {
+          // Force refresh just this image's URL
+          const newUrl = await getPreSignedUrl(selectedImage.key, 0, true);
+          console.log('Refreshed URL after tile load failure:', newUrl);
+          
+          // Update the image in our state
+          const updatedSelected = { ...selectedImage, url: newUrl };
+          setSelectedImage(updatedSelected);
+          
+          // Retry loading the image with the new URL
+          viewer.open({
+            type: 'image',
+            url: newUrl,
+            crossOriginPolicy: 'Anonymous',
+            buildPyramid: false,
+          });
+        } catch (error) {
+          console.error('Failed to refresh URL after tile load failure:', error);
+          setErrorMessage('Image loading error. Please select another image or try again later.');
+        }
+      }
     });
 
     viewer.addHandler('open-failed', async (event) => {
       console.warn('Open failed:', event);
-      setErrorMessage('Failed to load the image. Please try again later.');
-      await refreshUrls(); // Use `await` here to ensure URLs are refreshed before retrying.
-      viewer.open(event.place); // Retry opening the image.
+      setErrorMessage('Failed to load the image.');
+      
+      if (selectedImage) {
+        try {
+          // Force refresh just this image's URL
+          const newUrl = await getPreSignedUrl(selectedImage.key, 0, true);
+          console.log('Refreshed URL after open failure:', newUrl);
+          
+          // Update the image in our state
+          const updatedSelected = { ...selectedImage, url: newUrl };
+          setSelectedImage(updatedSelected);
+          
+          // Retry loading the image with the new URL
+          setTimeout(() => {
+            viewer.open({
+              type: 'image',
+              url: newUrl,
+              crossOriginPolicy: 'Anonymous',
+              buildPyramid: false,
+            });
+          }, 500); // Small delay to allow UI to update
+        } catch (error) {
+          console.error('Failed to refresh URL after open failure:', error);
+        }
+      }
     });
 
     viewer.addHandler('error', async function(event) {
-      console.log('Viewer error, attempting refresh');
-      setErrorMessage('Viewer error occurred. Please try again later.');
-      await refreshUrls(); // Use `await` here to ensure URLs are refreshed before retrying.
-      viewer.open(event.place); // Retry opening the image.
+      console.log('Viewer error, attempting recovery');
+      setErrorMessage('Viewer error occurred. Attempting to recover...');
+      
+      if (selectedImage) {
+        try {
+          // Force refresh the URL and retry
+          const newUrl = await getPreSignedUrl(selectedImage.key, 0, true);
+          const updatedSelected = { ...selectedImage, url: newUrl };
+          setSelectedImage(updatedSelected);
+          
+          viewer.open({
+            type: 'image',
+            url: newUrl,
+            crossOriginPolicy: 'Anonymous',
+            buildPyramid: false,
+          });
+        } catch (error) {
+          console.error('Recovery failed:', error);
+          setErrorMessage('Recovery failed. Please try selecting another image or refresh the page.');
+        }
+      }
     });
 
     setViewer(viewer);
@@ -266,19 +412,31 @@ const App = () => {
     }
   }, [viewer, images, selectedImage, handleImageSelect]);
 
-  // Reduced Refresh to every 30 minutes, and now it checks for existing cache.
+  // Proactive URL refreshing
   React.useEffect(() => {
-    const regenerateUrls = async () => {
-      if (images.length === 0) return;
-      // Only refresh if there are no valid URLs in the cache
-      if (!images.every(img => urlCache.current.has(img.key) && urlCache.current.get(img.key).expiry > Date.now())) {
-        await refreshUrls();
+    // Check for URLs that will expire soon and refresh them
+    const proactiveRefresh = async () => {
+      if (images.length === 0 || isRefreshing) return;
+      
+      // Find images with URLs that will expire in the next 10 minutes
+      const soonExpiringImages = images.filter(img => {
+        if (!urlCache.current.has(img.key)) return true;
+        const { expiry } = urlCache.current.get(img.key);
+        return expiry < Date.now() + 10 * 60 * 1000; // 10 minute buffer
+      });
+      
+      if (soonExpiringImages.length > 0) {
+        console.log(`Proactively refreshing ${soonExpiringImages.length} soon-to-expire URLs`);
+        await refreshUrls(soonExpiringImages);
       }
     };
 
-    const interval = setInterval(regenerateUrls, 30 * 60 * 1000); // 30 minutes
+    // Run initially and set interval
+    proactiveRefresh();
+    const interval = setInterval(proactiveRefresh, 5 * 60 * 1000); // Check every 5 minutes
+    
     return () => clearInterval(interval);
-  }, [images, selectedImage, viewer]);
+  }, [images, isRefreshing]);
 
   return (
     <div className="app-container">
@@ -316,6 +474,13 @@ const App = () => {
           {errorMessage && (
             <div className="error-message">
               {errorMessage}
+              <button 
+                onClick={recoverFromError} 
+                className="recovery-button"
+                style={{ marginLeft: '10px', padding: '5px 10px' }}
+              >
+                Try to recover
+              </button>
             </div>
           )}
         </div>
