@@ -21,9 +21,70 @@ const App = () => {
   const [exifData, setExifData] = React.useState(null);
   const [ratings, setRatings] = React.useState({});
   const [errorMessage, setErrorMessage] = React.useState(null);
+  const [imageDimensions, setImageDimensions] = React.useState({ width: 0, height: 0 });
+  const [containerWidth, setContainerWidth] = React.useState(0);
   const filmstripRef = React.useRef(null);
   const urlCache = React.useRef(new Map()); // Cache URLs
   const urlRefreshQueue = React.useRef(new Set()); // Queue of URLs to refresh
+  const viewerContainerRef = React.useRef(null);
+  const viewerRef = React.useRef(null);
+
+  // Function to get image dimensions
+  const getImageDimensions = (imageUrl) => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        resolve({
+          width: img.naturalWidth,
+          height: img.naturalHeight,
+          aspectRatio: img.naturalWidth / img.naturalHeight
+        });
+      };
+      img.onerror = () => {
+        reject(new Error('Failed to load image for dimension calculation'));
+      };
+      img.src = imageUrl;
+      img.crossOrigin = 'anonymous';
+    });
+  };
+
+  // Function to adjust viewer container based on image dimensions
+  const adjustViewerContainer = React.useCallback(() => {
+    if (!viewerContainerRef.current || !imageDimensions.width || !imageDimensions.height) return;
+    
+    // Use the full available width
+    const maxWidth = viewerContainerRef.current.parentElement.clientWidth;
+    setContainerWidth(maxWidth);
+    
+    // Calculate height based on aspect ratio
+    const aspectRatio = imageDimensions.width / imageDimensions.height;
+    const calculatedHeight = maxWidth / aspectRatio;
+    
+    // Apply dimensions to container
+    viewerContainerRef.current.style.width = `${maxWidth}px`;
+    viewerContainerRef.current.style.height = `${calculatedHeight}px`;
+    
+    // Notify the viewer of the resize
+    if (viewerRef.current) {
+      viewerRef.current.viewport.goHome(true);
+      viewerRef.current.forceResize();
+    }
+  }, [imageDimensions]);
+
+  // Add resize listener
+  React.useEffect(() => {
+    const handleResize = debounce(() => {
+      adjustViewerContainer();
+    }, 200);
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [adjustViewerContainer]);
+
+  // Adjust container when dimensions change
+  React.useEffect(() => {
+    adjustViewerContainer();
+  }, [imageDimensions, adjustViewerContainer]);
 
   const getPreSignedUrl = async (key, retryCount = 0, forceRefresh = false) => {
     // Check cache first (unless force refresh is requested)
@@ -161,49 +222,62 @@ const App = () => {
     setSelectedImage(image);
     setErrorMessage(null); // Clear any previous error messages
     
-    if (viewer) {
-      try {
-        // Check if URL might be stale and refresh if needed
-        let imageUrl = image.url;
-        if (urlCache.current.has(image.key)) {
-          const { expiry } = urlCache.current.get(image.key);
-          if (expiry < Date.now() + 10 * 60 * 1000) { // Less than 10 minutes left
-            imageUrl = await getPreSignedUrl(image.key, 0, true);
-            // Update image in state with new URL
-            setSelectedImage(prev => prev && prev.id === image.id ? {...prev, url: imageUrl} : prev);
-          }
+    try {
+      // Check if URL might be stale and refresh if needed
+      let imageUrl = image.url;
+      if (urlCache.current.has(image.key)) {
+        const { expiry } = urlCache.current.get(image.key);
+        if (expiry < Date.now() + 10 * 60 * 1000) { // Less than 10 minutes left
+          imageUrl = await getPreSignedUrl(image.key, 0, true);
+          // Update image in state with new URL
+          image = {...image, url: imageUrl};
+          setSelectedImage(image);
         }
-        
-        // Open image in viewer
-        viewer.open({
+      }
+      
+      // Get image dimensions first
+      setIsLoading(true);
+      const dimensions = await getImageDimensions(imageUrl);
+      setImageDimensions(dimensions);
+      
+      // Then open image in viewer
+      if (viewerRef.current) {
+        viewerRef.current.open({
           type: 'image',
           url: imageUrl,
           crossOriginPolicy: 'Anonymous',
           buildPyramid: false,
         });
-      } catch (error) {
-        console.error('Error opening image:', error);
-        setErrorMessage('Failed to load the selected image. Please try again later.');
+      }
+    } catch (error) {
+      console.error('Error opening image:', error);
+      setErrorMessage('Failed to load the selected image. Please try again later.');
+      
+      // Try to recover
+      try {
+        const newUrl = await getPreSignedUrl(image.key, 0, true);
+        const updatedImage = { ...image, url: newUrl };
+        setSelectedImage(updatedImage);
         
-        // Try to recover
-        try {
-          const newUrl = await getPreSignedUrl(image.key, 0, true);
-          const updatedImage = { ...image, url: newUrl };
-          setSelectedImage(updatedImage);
-          
-          viewer.open({
+        const dimensions = await getImageDimensions(newUrl);
+        setImageDimensions(dimensions);
+        
+        if (viewerRef.current) {
+          viewerRef.current.open({
             type: 'image',
             url: newUrl,
             crossOriginPolicy: 'Anonymous',
             buildPyramid: false,
           });
-        } catch (retryError) {
-          console.error('Retry failed:', retryError);
-          setErrorMessage('Failed to load the image. Please select another image or refresh the page.');
         }
+      } catch (retryError) {
+        console.error('Retry failed:', retryError);
+        setErrorMessage('Failed to load the image. Please select another image or refresh the page.');
       }
+    } finally {
+      setIsLoading(false);
     }
-  }, [viewer]);
+  }, []);
 
   const fetchExifData = (imageUrl) => {
     const img = new Image();
@@ -236,17 +310,22 @@ const App = () => {
       await refreshUrls();
       
       // If we have a selected image, try reloading it
-      if (selectedImage && viewer) {
+      if (selectedImage) {
         const newUrl = await getPreSignedUrl(selectedImage.key, 0, true);
         const updatedImage = { ...selectedImage, url: newUrl };
         setSelectedImage(updatedImage);
         
-        viewer.open({
-          type: 'image',
-          url: newUrl,
-          crossOriginPolicy: 'Anonymous',
-          buildPyramid: false,
-        });
+        const dimensions = await getImageDimensions(newUrl);
+        setImageDimensions(dimensions);
+        
+        if (viewerRef.current) {
+          viewerRef.current.open({
+            type: 'image',
+            url: newUrl,
+            crossOriginPolicy: 'Anonymous',
+            buildPyramid: false,
+          });
+        }
       }
       
       setErrorMessage(null);
@@ -254,6 +333,15 @@ const App = () => {
       console.error('Recovery failed:', error);
       setErrorMessage('Recovery failed. Please refresh the page.');
     }
+  };
+
+  // Simple debounce function
+  const debounce = (func, wait) => {
+    let timeout;
+    return function(...args) {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => func.apply(this, args), wait);
+    };
   };
 
   React.useEffect(() => {
@@ -315,7 +403,8 @@ const App = () => {
       showReferenceStrip: false,
       defaultZoomLevel: 0,
       timeout: 120000,
-      // Removed immediateRender. Let OpenSeaDragon Handle Rendering.
+      autoResize: false, // We'll handle resizing manually
+      preserveViewport: true, // Preserve zoom/pan when changing images
     });
 
     viewer.addHandler('tile-load-failed', async (event) => {
@@ -398,7 +487,9 @@ const App = () => {
         }
       }
     });
-
+    
+    // Store the viewer in refs for access
+    viewerRef.current = viewer;
     setViewer(viewer);
 
     return () => {
@@ -449,6 +540,14 @@ const App = () => {
           <div
             id="openseadragon-viewer"
             className="viewer-container"
+            ref={viewerContainerRef}
+            style={{
+              width: '100%',
+              height: imageDimensions.height ? (containerWidth / imageDimensions.aspectRatio) : '600px',
+              margin: '0 auto',
+              backgroundColor: '#000',
+              transition: 'height 0.3s ease-in-out'
+            }}
           />
           {selectedImage && (
             <div>
@@ -461,6 +560,11 @@ const App = () => {
                 />
               </div>
               <button className="exif-button" onClick={() => fetchExifData(selectedImage.url)}>View EXIF</button>
+              {imageDimensions.width > 0 && (
+                <span className="image-dimensions">
+                  {imageDimensions.width} × {imageDimensions.height}
+                </span>
+              )}
             </div>
           )}
           {exifData && (
