@@ -258,8 +258,10 @@ import '../../styles/admin.css';
   });
 
   // ── Slot manager (photos + dataviz) ──
-  const slotData: Record<string, (string | null)[]> = {};
+  interface SlotItem { url: string; caption: string; }
+  const slotData: Record<string, (SlotItem | null)[]> = {};
   const slotDataLoaded = new Set<string>();
+  const showCaptions: Record<string, boolean> = { photos: false, dataviz: true };
 
   function renderSlots(containerId: string, count: number, pageId: string) {
     const container = document.getElementById(containerId)!;
@@ -269,7 +271,8 @@ import '../../styles/admin.css';
     for (let i = 0; i < count; i++) {
       const slot = document.createElement('div');
       slot.className = 'admin-slot';
-      const url = slotData[pageId][i];
+      const item = slotData[pageId][i];
+      const url = item?.url;
 
       let preview = '';
       let dropContent = '';
@@ -277,7 +280,7 @@ import '../../styles/admin.css';
         if (/\.html?$/i.test(url)) {
           preview = `<div class="admin-slot__iframe-wrap"><iframe src="${url}"></iframe></div>`;
         } else if (/\.(mp4|webm|mov)$/i.test(url)) {
-          preview = `<video src="${url}" muted loop autoplay playsinline style="width:100%;height:100%;object-fit:cover;"></video>`;
+          preview = `<video src="${url}" muted loop autoplay playsinline style="width:100%;height:100%;object-fit:contain;"></video>`;
         } else {
           preview = `<img src="${url}" alt="Slot ${i+1}" />`;
         }
@@ -285,10 +288,17 @@ import '../../styles/admin.css';
         dropContent = `<p>Drop file here</p>
           <input type="file" accept="image/*,video/*,.html,.htm,.svg" data-file-index="${i}" data-file-page="${pageId}" />`;
       }
+
+      const captionField = (url && showCaptions[pageId]) ? `
+        <div class="admin-field" style="margin:0;padding:var(--space-sm);">
+          <input type="text" placeholder="Caption..." value="${item?.caption || ''}" data-caption-index="${i}" data-caption-page="${pageId}" style="font-size:var(--size-xs);" />
+        </div>` : '';
+
       slot.innerHTML = `
         <div class="admin-slot__preview ${url ? '' : 'admin-dropzone'}" data-drop-index="${i}" data-drop-page="${pageId}">
           ${preview || dropContent}
         </div>
+        ${captionField}
         <div class="admin-slot__actions">
           ${url ? `<button class="admin-btn admin-btn--small admin-btn--danger" data-clear-index="${i}" data-clear-page="${pageId}">Remove</button>` : ''}
         </div>
@@ -315,6 +325,14 @@ import '../../styles/admin.css';
       });
     });
 
+    container.querySelectorAll<HTMLInputElement>('[data-caption-index]').forEach(input => {
+      input.addEventListener('input', () => {
+        const pg = input.dataset.captionPage!;
+        const idx = parseInt(input.dataset.captionIndex!);
+        if (slotData[pg][idx]) slotData[pg][idx]!.caption = input.value;
+      });
+    });
+
     container.querySelectorAll<HTMLButtonElement>('[data-clear-index]').forEach(btn => {
       btn.addEventListener('click', () => {
         const pg = btn.dataset.clearPage!;
@@ -328,7 +346,11 @@ import '../../styles/admin.css';
       slotDataLoaded.add(pageId);
       api.getContent(pageId).then(data => {
         if (data.content?.slots) {
-          slotData[pageId] = data.content.slots.map((s: any) => typeof s === 'string' ? s : s?.url || null);
+          slotData[pageId] = data.content.slots.map((s: any) => {
+            if (!s) return null;
+            if (typeof s === 'string') return { url: s, caption: '' };
+            return { url: s.url, caption: s.caption || '' };
+          });
           while (slotData[pageId].length < count) slotData[pageId].push(null);
           renderSlots(containerId, count, pageId);
         }
@@ -341,7 +363,7 @@ import '../../styles/admin.css';
       const prefix = pageId === 'photos' ? 'photos' : 'dataviz';
       const { uploadUrl, publicUrl } = await api.getPresignedUrl(file.name, file.type, prefix);
       await fetch(uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
-      slotData[pageId][index] = publicUrl;
+      slotData[pageId][index] = { url: publicUrl, caption: slotData[pageId][index]?.caption || '' };
       const count = pageId === 'photos' ? 3 : 6;
       renderSlots(containerId, count, pageId);
     } catch (err: any) {
@@ -353,7 +375,7 @@ import '../../styles/admin.css';
   document.getElementById('save-photos')?.addEventListener('click', async () => {
     const statusEl = document.getElementById('photos-status')!;
     try {
-      await api.putContent('photos', { slots: slotData['photos'] || [] });
+      await api.putContent('photos', { slots: (slotData['photos'] || []).map(s => s?.url || null) });
       statusEl.textContent = 'Saved.'; statusEl.className = 'admin-success'; statusEl.style.display = 'block';
     } catch (err: any) {
       statusEl.textContent = err.message; statusEl.className = 'admin-error'; statusEl.style.display = 'block';

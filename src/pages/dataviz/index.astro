@@ -45,34 +45,43 @@ import Base from '../../layouts/Base.astro';
     return 'image';
   }
 
-  function renderSlot(el: Element, url: string) {
+  function renderSlot(el: Element, slot: any) {
+    const url = typeof slot === 'string' ? slot : slot.url;
+    const caption = typeof slot === 'string' ? '' : (slot.caption || '');
     const type = detectType(url);
     el.classList.add('dataviz__slot--filled');
     el.setAttribute('data-viz-url', url);
     el.setAttribute('data-viz-type', type);
 
+    const overlay = `<div class="dataviz__overlay"><span>Click to expand</span></div>`;
+    const captionHtml = caption ? `<div class="dataviz__caption">${caption}</div>` : '';
+
     if (type === 'html') {
-      el.innerHTML = `<iframe src="${url}" loading="lazy" sandbox="allow-scripts allow-same-origin"></iframe>
-        <div class="dataviz__overlay"><span>Click to expand</span></div>`;
-      scaleIframe(el as HTMLElement);
+      el.innerHTML = `<div class="dataviz__iframe-wrap"><iframe src="${url}" loading="lazy"></iframe></div>${captionHtml}${overlay}`;
+      requestAnimationFrame(() => scaleIframe(el as HTMLElement));
     } else if (type === 'video') {
-      el.innerHTML = `<video src="${url}" muted loop autoplay playsinline></video>
-        <div class="dataviz__overlay"><span>Click to expand</span></div>`;
+      el.innerHTML = `<video src="${url}" muted loop autoplay playsinline></video>${captionHtml}${overlay}`;
+    } else if (/\.svg$/i.test(url)) {
+      el.innerHTML = `<object data="${url}" type="image/svg+xml" class="dataviz__svg"></object>${captionHtml}${overlay}`;
     } else {
-      el.innerHTML = `<img src="${url}" alt="" loading="lazy" />
-        <div class="dataviz__overlay"><span>Click to expand</span></div>`;
+      el.innerHTML = `<img src="${url}" alt="${caption}" loading="lazy" />${captionHtml}${overlay}`;
     }
   }
 
   function scaleIframe(slot: HTMLElement) {
-    const iframe = slot.querySelector('iframe');
-    if (!iframe) return;
+    const wrap = slot.querySelector('.dataviz__iframe-wrap') as HTMLElement;
+    const iframe = slot.querySelector('iframe') as HTMLIFrameElement;
+    if (!wrap || !iframe) return;
     const update = () => {
-      const slotWidth = slot.clientWidth;
-      const scale = slotWidth / 1024;
+      const w = wrap.clientWidth;
+      const h = wrap.clientHeight;
+      const scaleX = w / 1024;
+      const scaleY = h / 768;
+      const scale = Math.min(scaleX, scaleY);
       iframe.style.transform = `scale(${scale})`;
     };
     update();
+    iframe.addEventListener('load', update);
     window.addEventListener('resize', update);
   }
 
@@ -81,10 +90,11 @@ import Base from '../../layouts/Base.astro';
       const data = await api.getContent('dataviz');
       if (!data.content?.slots) return;
       data.content.slots.forEach((slot: any, i: number) => {
+        if (!slot) return;
         const url = typeof slot === 'string' ? slot : slot?.url;
         if (!url) return;
         const el = document.querySelector(`[data-viz-slot="${i}"]`);
-        if (el) renderSlot(el, url);
+        if (el) renderSlot(el, slot);
       });
     } catch { /* keep empty slots */ }
   }
@@ -167,12 +177,39 @@ import Base from '../../layouts/Base.astro';
   .dataviz__slot video {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
+    background: var(--bg-surface);
     border: none;
     pointer-events: none;
   }
 
-  .dataviz__slot iframe {
+  .dataviz__caption {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: var(--space-sm) var(--space-md);
+    background: rgba(6, 6, 11, 0.85);
+    font-size: var(--size-sm);
+    color: var(--text-secondary);
+    line-height: 1.4;
+    z-index: 1;
+  }
+
+  .dataviz__svg {
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+
+  .dataviz__iframe-wrap {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .dataviz__iframe-wrap iframe {
     width: 1024px;
     height: 768px;
     border: none;
@@ -181,31 +218,31 @@ import Base from '../../layouts/Base.astro';
     position: absolute;
     top: 0;
     left: 0;
+    background: #fff;
   }
 
   .dataviz__overlay {
     position: absolute;
     inset: 0;
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     justify-content: center;
+    padding-bottom: var(--space-md);
     background: rgba(6, 6, 11, 0);
-    transition: background 0.2s;
+    opacity: 0;
+    transition: opacity 0.2s, background 0.2s;
+    z-index: 2;
   }
 
   .dataviz__overlay span {
     font-family: var(--font-mono);
-    font-size: var(--size-sm);
-    color: transparent;
-    transition: color 0.2s;
+    font-size: var(--size-xs);
+    color: var(--text-secondary);
   }
 
   .dataviz__slot--filled:hover .dataviz__overlay {
+    opacity: 1;
     background: rgba(6, 6, 11, 0.5);
-  }
-
-  .dataviz__slot--filled:hover .dataviz__overlay span {
-    color: var(--text-primary);
   }
 
   .dataviz__empty-slot {
