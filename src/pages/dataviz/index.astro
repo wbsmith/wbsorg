@@ -15,7 +15,7 @@ import Base from '../../layouts/Base.astro';
         </p>
         <hr class="section__divider" />
       </div>
-      <div class="dataviz__grid">
+      <div class="dataviz__grid" id="dataviz-grid">
         {[0,1,2,3,4,5].map(i => (
           <div class="dataviz__slot" data-viz-slot={i}>
             <div class="dataviz__empty-slot">
@@ -26,32 +26,91 @@ import Base from '../../layouts/Base.astro';
       </div>
     </div>
   </section>
+
+  <dialog class="dataviz__modal" id="dataviz-modal">
+    <div class="dataviz__modal-header">
+      <button class="dataviz__modal-close" id="dataviz-modal-close" aria-label="Close">&times;</button>
+    </div>
+    <div class="dataviz__modal-body" id="dataviz-modal-body"></div>
+  </dialog>
 </Base>
 
 <script>
   import { api } from '../../lib/api-client';
+
+  function detectType(url: string): string {
+    const lower = url.toLowerCase();
+    if (lower.endsWith('.html') || lower.endsWith('.htm')) return 'html';
+    if (lower.endsWith('.mp4') || lower.endsWith('.webm') || lower.endsWith('.mov')) return 'video';
+    return 'image';
+  }
+
+  function renderSlot(el: Element, url: string) {
+    const type = detectType(url);
+    el.classList.add('dataviz__slot--filled');
+    el.setAttribute('data-viz-url', url);
+    el.setAttribute('data-viz-type', type);
+
+    if (type === 'html') {
+      el.innerHTML = `<iframe src="${url}" loading="lazy" sandbox="allow-scripts allow-same-origin"></iframe>
+        <div class="dataviz__overlay"><span>Click to expand</span></div>`;
+    } else if (type === 'video') {
+      el.innerHTML = `<video src="${url}" muted loop autoplay playsinline></video>
+        <div class="dataviz__overlay"><span>Click to expand</span></div>`;
+    } else {
+      el.innerHTML = `<img src="${url}" alt="" loading="lazy" />
+        <div class="dataviz__overlay"><span>Click to expand</span></div>`;
+    }
+  }
 
   async function loadViz() {
     try {
       const data = await api.getContent('dataviz');
       if (!data.content?.slots) return;
       data.content.slots.forEach((slot: any, i: number) => {
-        if (!slot?.url) return;
+        const url = typeof slot === 'string' ? slot : slot?.url;
+        if (!url) return;
         const el = document.querySelector(`[data-viz-slot="${i}"]`);
-        if (!el) return;
-        if (slot.type === 'image') {
-          el.innerHTML = `<img src="${slot.url}" alt="${slot.title || ''}" loading="lazy" />
-            ${slot.title ? `<span class="dataviz__caption">${slot.title}</span>` : ''}`;
-        } else if (slot.type === 'video') {
-          el.innerHTML = `<video src="${slot.url}" controls></video>
-            ${slot.title ? `<span class="dataviz__caption">${slot.title}</span>` : ''}`;
-        } else if (slot.type === 'embed') {
-          el.innerHTML = `<iframe src="${slot.url}" title="${slot.title || ''}" loading="lazy"></iframe>
-            ${slot.title ? `<span class="dataviz__caption">${slot.title}</span>` : ''}`;
-        }
+        if (el) renderSlot(el, url);
       });
     } catch { /* keep empty slots */ }
   }
+
+  // Fullscreen modal
+  const modal = document.getElementById('dataviz-modal') as HTMLDialogElement;
+  const modalBody = document.getElementById('dataviz-modal-body')!;
+  const modalClose = document.getElementById('dataviz-modal-close')!;
+
+  document.getElementById('dataviz-grid')!.addEventListener('click', (e) => {
+    const slot = (e.target as HTMLElement).closest('.dataviz__slot--filled') as HTMLElement | null;
+    if (!slot) return;
+
+    const url = slot.getAttribute('data-viz-url')!;
+    const type = slot.getAttribute('data-viz-type')!;
+
+    if (type === 'html') {
+      modalBody.innerHTML = `<iframe src="${url}" class="dataviz__modal-iframe"></iframe>`;
+    } else if (type === 'video') {
+      modalBody.innerHTML = `<video src="${url}" controls autoplay class="dataviz__modal-media"></video>`;
+    } else {
+      modalBody.innerHTML = `<img src="${url}" alt="" class="dataviz__modal-media" />`;
+    }
+
+    modal.showModal();
+  });
+
+  modalClose.addEventListener('click', () => {
+    modalBody.innerHTML = '';
+    modal.close();
+  });
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modalBody.innerHTML = '';
+      modal.close();
+    }
+  });
+
   loadViz();
 </script>
 
@@ -87,6 +146,10 @@ import Base from '../../layouts/Base.astro';
     position: relative;
   }
 
+  .dataviz__slot--filled {
+    cursor: pointer;
+  }
+
   .dataviz__slot img,
   .dataviz__slot video,
   .dataviz__slot iframe {
@@ -94,6 +157,32 @@ import Base from '../../layouts/Base.astro';
     height: 100%;
     object-fit: cover;
     border: none;
+    pointer-events: none;
+  }
+
+  .dataviz__overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(6, 6, 11, 0);
+    transition: background 0.2s;
+  }
+
+  .dataviz__overlay span {
+    font-family: var(--font-mono);
+    font-size: var(--size-sm);
+    color: transparent;
+    transition: color 0.2s;
+  }
+
+  .dataviz__slot--filled:hover .dataviz__overlay {
+    background: rgba(6, 6, 11, 0.5);
+  }
+
+  .dataviz__slot--filled:hover .dataviz__overlay span {
+    color: var(--text-primary);
   }
 
   .dataviz__empty-slot {
@@ -110,15 +199,67 @@ import Base from '../../layouts/Base.astro';
     color: var(--border-subtle);
   }
 
-  .dataviz__caption {
+  /* Modal */
+  .dataviz__modal {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    max-height: 100%;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: rgba(6, 6, 11, 0.95);
+    z-index: 300;
+  }
+
+  .dataviz__modal::backdrop {
+    background: transparent;
+  }
+
+  .dataviz__modal-header {
     position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding: var(--space-sm) var(--space-md);
-    background: rgba(6, 6, 11, 0.8);
-    font-family: var(--font-mono);
-    font-size: var(--size-xs);
+    top: var(--space-md);
+    right: var(--space-md);
+    z-index: 10;
+  }
+
+  .dataviz__modal-close {
+    font-size: 2rem;
     color: var(--text-secondary);
+    background: none;
+    border: none;
+    cursor: pointer;
+    line-height: 1;
+    padding: var(--space-sm);
+  }
+
+  .dataviz__modal-close:hover {
+    color: var(--text-primary);
+  }
+
+  .dataviz__modal-body {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-3xl);
+  }
+
+  .dataviz__modal-iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    border-radius: var(--radius-md);
+    background: #fff;
+  }
+
+  .dataviz__modal-media {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: var(--radius-md);
   }
 </style>

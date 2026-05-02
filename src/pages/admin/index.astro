@@ -275,7 +275,7 @@ import '../../styles/admin.css';
           ${url
             ? `<img src="${url}" alt="Slot ${i+1}" />`
             : `<p>Drop file here</p>`}
-          <input type="file" accept="image/*,video/*" data-file-index="${i}" data-file-page="${pageId}" />
+          <input type="file" accept="image/*,video/*,.html,.htm,.svg" data-file-index="${i}" data-file-page="${pageId}" />
         </div>
         <div class="admin-slot__actions">
           ${url ? `<button class="admin-btn admin-btn--small admin-btn--danger" data-clear-index="${i}" data-clear-page="${pageId}">Remove</button>` : ''}
@@ -325,7 +325,7 @@ import '../../styles/admin.css';
 
   async function uploadToSlot(file: File, pageId: string, index: number, containerId: string) {
     try {
-      const prefix = pageId === 'photos' ? 'public/photos' : 'public/dataviz';
+      const prefix = pageId === 'photos' ? 'photos' : 'dataviz';
       const { uploadUrl, publicUrl } = await api.getPresignedUrl(file.name, file.type, prefix);
       await fetch(uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
       slotData[pageId][index] = publicUrl;
