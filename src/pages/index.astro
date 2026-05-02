@@ -23,9 +23,7 @@ import ContactForm from '../components/ContactForm.astro';
         </div>
         <div class="hero__photo">
           <div class="hero__photo-frame">
-            <div class="hero__photo-placeholder">
-              <span>Photo</span>
-            </div>
+            <img src="/headshot_website.jpg" alt="W. Bryan Smith" />
           </div>
         </div>
       </div>
@@ -263,22 +261,18 @@ import ContactForm from '../components/ContactForm.astro';
 
   .hero__photo-frame {
     width: 240px;
-    height: 300px;
+    aspect-ratio: 1059 / 1186;
     border-radius: var(--radius-lg);
     overflow: hidden;
     border: 1px solid var(--border-medium);
     background: var(--bg-surface);
   }
 
-  .hero__photo-placeholder {
+  .hero__photo-frame img {
     width: 100%;
     height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--text-muted);
-    font-family: var(--font-mono);
-    font-size: var(--size-sm);
+    object-fit: cover;
+    object-position: left center;
   }
 
   @media (max-width: 768px) {
