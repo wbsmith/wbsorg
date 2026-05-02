@@ -270,11 +270,19 @@ import '../../styles/admin.css';
       slot.className = 'admin-slot';
       const url = slotData[pageId][i];
 
+      let preview = `<p>Drop file here</p>`;
+      if (url) {
+        if (/\.html?$/i.test(url)) {
+          preview = `<iframe src="${url}" style="width:100%;height:100%;border:none;pointer-events:none;"></iframe>`;
+        } else if (/\.(mp4|webm|mov)$/i.test(url)) {
+          preview = `<video src="${url}" muted loop autoplay playsinline style="width:100%;height:100%;object-fit:cover;"></video>`;
+        } else {
+          preview = `<img src="${url}" alt="Slot ${i+1}" />`;
+        }
+      }
       slot.innerHTML = `
         <div class="admin-slot__preview admin-dropzone" data-drop-index="${i}" data-drop-page="${pageId}">
-          ${url
-            ? `<img src="${url}" alt="Slot ${i+1}" />`
-            : `<p>Drop file here</p>`}
+          ${preview}
           <input type="file" accept="image/*,video/*,.html,.htm,.svg" data-file-index="${i}" data-file-page="${pageId}" />
         </div>
         <div class="admin-slot__actions">
