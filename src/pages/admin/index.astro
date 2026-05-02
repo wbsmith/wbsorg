@@ -341,6 +341,19 @@ import '../../styles/admin.css';
       });
     });
 
+    // Scale iframes to fit slots
+    container.querySelectorAll<HTMLDivElement>('.admin-slot__iframe-wrap').forEach(wrap => {
+      const iframe = wrap.querySelector('iframe');
+      if (!iframe) return;
+      const doScale = () => {
+        const w = wrap.clientWidth;
+        if (w > 0) iframe.style.transform = `scale(${w / 1024})`;
+      };
+      iframe.addEventListener('load', doScale);
+      setTimeout(doScale, 100);
+      window.addEventListener('resize', doScale);
+    });
+
     // Load existing data (once)
     if (!slotDataLoaded.has(pageId)) {
       slotDataLoaded.add(pageId);
