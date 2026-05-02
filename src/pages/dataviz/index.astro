@@ -54,33 +54,35 @@ import Base from '../../layouts/Base.astro';
     el.setAttribute('data-viz-type', type);
 
     const captionHtml = caption ? `<div class="dataviz__caption">${caption}</div>` : '';
-    let content = '';
 
     if (type === 'html') {
-      content = `<iframe src="${url}" class="dataviz__iframe" loading="lazy"></iframe>`;
+      el.innerHTML = `<div class="dataviz__iframe-wrap"><iframe src="${url}"></iframe></div>${captionHtml}`;
+      scaleIframeInSlot(el as HTMLElement);
     } else if (type === 'video') {
-      content = `<video src="${url}" muted loop autoplay playsinline></video>`;
-    } else if (/\.svg$/i.test(url)) {
-      content = `<object data="${url}" type="image/svg+xml" class="dataviz__svg"></object>`;
+      el.innerHTML = `<video src="${url}" muted loop autoplay playsinline></video>${captionHtml}`;
     } else {
-      content = `<img src="${url}" alt="${caption}" loading="lazy" />`;
+      el.innerHTML = `<img src="${url}" alt="${caption}" loading="lazy" />${captionHtml}`;
     }
+  }
 
-    el.innerHTML = content + captionHtml;
+  function scaleIframeInSlot(slot: Element) {
+    const wrap = slot.querySelector('.dataviz__iframe-wrap') as HTMLElement;
+    const iframe = wrap?.querySelector('iframe') as HTMLIFrameElement;
+    if (!wrap || !iframe) return;
 
-    if (type === 'html') {
-      const iframe = el.querySelector('iframe')!;
-      const doScale = () => {
-        const w = el.clientWidth;
-        if (w > 0) {
-          const scale = w / 1024;
-          iframe.style.transform = `scale(${scale})`;
-        }
-      };
-      iframe.addEventListener('load', doScale);
-      setTimeout(doScale, 100);
-      window.addEventListener('resize', doScale);
-    }
+    const apply = () => {
+      const w = wrap.clientWidth;
+      const h = wrap.clientHeight;
+      if (w > 0 && h > 0) {
+        const scale = Math.min(w / 1024, h / 768);
+        iframe.style.transform = `scale(${scale})`;
+      }
+    };
+
+    // Use ResizeObserver so we scale once the slot actually has layout
+    const ro = new ResizeObserver(() => apply());
+    ro.observe(wrap);
+    iframe.addEventListener('load', apply);
   }
 
   async function loadViz() {
@@ -180,21 +182,23 @@ import Base from '../../layouts/Base.astro';
     border: none;
   }
 
-  .dataviz__svg {
+  .dataviz__iframe-wrap {
     width: 100%;
     height: 100%;
+    overflow: hidden;
+    position: relative;
   }
 
-  .dataviz__iframe {
+  .dataviz__iframe-wrap iframe {
     width: 1024px;
     height: 768px;
     border: none;
+    pointer-events: none;
     transform-origin: 0 0;
     position: absolute;
     top: 0;
     left: 0;
     background: #fff;
-    pointer-events: none;
   }
 
   .dataviz__empty-slot {
