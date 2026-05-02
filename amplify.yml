@@ -7,6 +7,7 @@ frontend:
     build:
       commands:
         - npm run build
+        - mv node_modules ./.amplify-hosting/compute/default
   artifacts:
     baseDirectory: .amplify-hosting
     files:
