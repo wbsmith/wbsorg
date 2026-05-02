@@ -114,41 +114,16 @@
 
 <script>
   const form = document.getElementById('contact-form') as HTMLFormElement;
-  const status = document.getElementById('contact-status')!;
-  const submit = form.querySelector('button[type="submit"]') as HTMLButtonElement;
 
-  form.addEventListener('submit', async (e) => {
+  form.addEventListener('submit', (e) => {
     e.preventDefault();
-    submit.disabled = true;
-    status.textContent = 'Sending...';
-    status.className = 'contact-form__status';
-
     const data = new FormData(form);
-    const body = {
-      name: data.get('name'),
-      email: data.get('email'),
-      message: data.get('message'),
-    };
+    const name = data.get('name') as string;
+    const email = data.get('email') as string;
+    const message = data.get('message') as string;
 
-    try {
-      const res = await fetch('/api/contact', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-
-      if (res.ok) {
-        status.textContent = 'Sent — thanks for reaching out.';
-        status.className = 'contact-form__status success';
-        form.reset();
-      } else {
-        throw new Error('Server error');
-      }
-    } catch {
-      status.textContent = 'Something went wrong. Try emailing hello@wbryansmith.org directly.';
-      status.className = 'contact-form__status error';
-    } finally {
-      submit.disabled = false;
-    }
+    const subject = encodeURIComponent(`Message from ${name}`);
+    const body = encodeURIComponent(`From: ${name} (${email})\n\n${message}`);
+    window.location.href = `mailto:hello@wbryansmith.org?subject=${subject}&body=${body}`;
   });
 </script>
