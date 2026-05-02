@@ -54,6 +54,7 @@ import Base from '../../layouts/Base.astro';
     if (type === 'html') {
       el.innerHTML = `<iframe src="${url}" loading="lazy" sandbox="allow-scripts allow-same-origin"></iframe>
         <div class="dataviz__overlay"><span>Click to expand</span></div>`;
+      scaleIframe(el as HTMLElement);
     } else if (type === 'video') {
       el.innerHTML = `<video src="${url}" muted loop autoplay playsinline></video>
         <div class="dataviz__overlay"><span>Click to expand</span></div>`;
@@ -61,6 +62,18 @@ import Base from '../../layouts/Base.astro';
       el.innerHTML = `<img src="${url}" alt="" loading="lazy" />
         <div class="dataviz__overlay"><span>Click to expand</span></div>`;
     }
+  }
+
+  function scaleIframe(slot: HTMLElement) {
+    const iframe = slot.querySelector('iframe');
+    if (!iframe) return;
+    const update = () => {
+      const slotWidth = slot.clientWidth;
+      const scale = slotWidth / 1024;
+      iframe.style.transform = `scale(${scale})`;
+    };
+    update();
+    window.addEventListener('resize', update);
   }
 
   async function loadViz() {
@@ -151,13 +164,23 @@ import Base from '../../layouts/Base.astro';
   }
 
   .dataviz__slot img,
-  .dataviz__slot video,
-  .dataviz__slot iframe {
+  .dataviz__slot video {
     width: 100%;
     height: 100%;
     object-fit: cover;
     border: none;
     pointer-events: none;
+  }
+
+  .dataviz__slot iframe {
+    width: 1024px;
+    height: 768px;
+    border: none;
+    pointer-events: none;
+    transform-origin: 0 0;
+    position: absolute;
+    top: 0;
+    left: 0;
   }
 
   .dataviz__overlay {
