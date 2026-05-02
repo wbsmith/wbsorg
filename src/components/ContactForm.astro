@@ -1,0 +1,154 @@
+---
+
+---
+
+<section class="section" id="contact">
+  <div class="container container--narrow">
+    <div class="section__header">
+      <span class="section__label">Contact</span>
+      <h2 class="section__title">Get in touch</h2>
+      <hr class="section__divider" />
+    </div>
+    <form class="contact-form" id="contact-form">
+      <div class="contact-form__field">
+        <label for="contact-name">Name</label>
+        <input type="text" id="contact-name" name="name" required autocomplete="name" />
+      </div>
+      <div class="contact-form__field">
+        <label for="contact-email">Email</label>
+        <input type="email" id="contact-email" name="email" required autocomplete="email" />
+      </div>
+      <div class="contact-form__field">
+        <label for="contact-message">Message</label>
+        <textarea id="contact-message" name="message" rows="5" required></textarea>
+      </div>
+      <button type="submit" class="contact-form__submit">Send</button>
+      <p class="contact-form__status" id="contact-status" aria-live="polite"></p>
+    </form>
+  </div>
+</section>
+
+<style>
+  .contact-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+    max-width: 32rem;
+  }
+
+  .contact-form__field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+
+  .contact-form__field label {
+    font-family: var(--font-mono);
+    font-size: var(--size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-secondary);
+  }
+
+  .contact-form__field input,
+  .contact-form__field textarea {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    padding: var(--space-sm) var(--space-md);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: var(--size-base);
+    transition: border-color 0.2s;
+  }
+
+  .contact-form__field input:focus,
+  .contact-form__field textarea:focus {
+    outline: none;
+    border-color: var(--cyan);
+  }
+
+  .contact-form__field textarea {
+    resize: vertical;
+    min-height: 8rem;
+  }
+
+  .contact-form__submit {
+    align-self: flex-start;
+    font-family: var(--font-display);
+    font-size: var(--size-sm);
+    font-weight: 600;
+    padding: var(--space-sm) var(--space-xl);
+    background: transparent;
+    color: var(--cyan);
+    border: 1px solid var(--cyan);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+  }
+
+  .contact-form__submit:hover {
+    background: var(--cyan);
+    color: var(--bg-deep);
+  }
+
+  .contact-form__submit:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .contact-form__status {
+    font-family: var(--font-mono);
+    font-size: var(--size-sm);
+    margin: 0;
+  }
+
+  .contact-form__status.success {
+    color: var(--cyan);
+  }
+
+  .contact-form__status.error {
+    color: var(--coral);
+  }
+</style>
+
+<script>
+  const form = document.getElementById('contact-form') as HTMLFormElement;
+  const status = document.getElementById('contact-status')!;
+  const submit = form.querySelector('button[type="submit"]') as HTMLButtonElement;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    submit.disabled = true;
+    status.textContent = 'Sending...';
+    status.className = 'contact-form__status';
+
+    const data = new FormData(form);
+    const body = {
+      name: data.get('name'),
+      email: data.get('email'),
+      message: data.get('message'),
+    };
+
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      if (res.ok) {
+        status.textContent = 'Sent — thanks for reaching out.';
+        status.className = 'contact-form__status success';
+        form.reset();
+      } else {
+        throw new Error('Server error');
+      }
+    } catch {
+      status.textContent = 'Something went wrong. Try emailing hello@wbryansmith.org directly.';
+      status.className = 'contact-form__status error';
+    } finally {
+      submit.disabled = false;
+    }
+  });
+</script>

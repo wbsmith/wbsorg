@@ -1,0 +1,67 @@
+---
+import Base from '../../layouts/Base.astro';
+
+export const prerender = true;
+---
+
+<Base title="Data Viz — W. Bryan Smith">
+  <section class="section">
+    <div class="container">
+      <div class="section__header">
+        <span class="section__label">Data Visualization</span>
+        <h1 class="section__title">Data Viz</h1>
+        <p class="dataviz__intro">
+          Interactive visualizations, exploratory analyses, and the occasional
+          video walkthrough. A mix of professional work samples and personal
+          explorations.
+        </p>
+        <hr class="section__divider" />
+      </div>
+      <div class="dataviz__placeholder">
+        <div class="dataviz__empty">
+          <span class="dataviz__icon">&#9683;</span>
+          <p>Interactive visualizations coming soon</p>
+          <p class="dataviz__sub">D3.js, Observable notebooks, and video walkthroughs will live here.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .dataviz__intro {
+    font-size: var(--size-lg);
+    color: var(--text-secondary);
+    max-width: 40rem;
+    margin-top: var(--space-md);
+  }
+
+  .dataviz__placeholder {
+    margin-top: var(--space-xl);
+  }
+
+  .dataviz__empty {
+    padding: var(--space-4xl) var(--space-xl);
+    text-align: center;
+    border: 1px dashed var(--border-subtle);
+    border-radius: var(--radius-md);
+  }
+
+  .dataviz__icon {
+    font-size: 3rem;
+    color: var(--magenta);
+    display: block;
+    margin-bottom: var(--space-md);
+  }
+
+  .dataviz__empty p {
+    font-family: var(--font-mono);
+    font-size: var(--size-sm);
+    color: var(--text-muted);
+  }
+
+  .dataviz__sub {
+    margin-top: var(--space-xs);
+    font-size: var(--size-xs) !important;
+  }
+</style>

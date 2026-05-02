@@ -1,0 +1,391 @@
+---
+import Base from '../layouts/Base.astro';
+import ContactForm from '../components/ContactForm.astro';
+
+export const prerender = true;
+---
+
+<Base title="W. Bryan Smith">
+  <!-- Hero -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero__grid">
+        <div class="hero__text">
+          <p class="hero__label">W. Bryan Smith, PhD</p>
+          <h1 class="hero__title">
+            Science, data,<br />
+            and the things<br />
+            <span class="hero__accent">between.</span>
+          </h1>
+          <p class="hero__sub">
+            Building at the intersection of neuroscience, AI,
+            and the systems that connect them to real decisions.
+          </p>
+        </div>
+        <div class="hero__photo">
+          <div class="hero__photo-frame">
+            <div class="hero__photo-placeholder">
+              <span>Photo</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- About -->
+  <section class="section">
+    <div class="container container--narrow">
+      <div class="section__header">
+        <span class="section__label">About</span>
+        <h2 class="section__title">Background</h2>
+        <hr class="section__divider" />
+      </div>
+      <div class="about__body">
+        <p>
+          I'm a multidisciplinary technical leader with a career that started in
+          the wet lab and moved through computational neuroscience, data science,
+          machine learning engineering, and executive leadership. PhD from Caltech
+          in neuroscience, where I studied local protein synthesis in hippocampal
+          neurons. That training — designing experiments, building models from
+          first principles, communicating findings clearly — has shaped everything
+          I've done since.
+        </p>
+        <p>
+          I've held technical and executive roles across biotech, healthcare,
+          gaming, market research, and enterprise retail. Currently Co-Founder
+          and CTO at <a href="https://earthineering.company/" target="_blank" rel="noopener">Earthineering</a>.
+          Previously CDO at Sequoia, led identity, interoperability, and AI for
+          Walmart Health &amp; Wellness, co-founded Myia Labs (an intelligent
+          health monitoring platform), and served as Chief Scientist at PokitDok.
+        </p>
+        <p>
+          I build things outside of work too — four independent web products, each
+          addressing a different problem I cared enough to solve. I also photograph
+          landscapes and cityscapes, mostly around the Bay Area and the Sierra,
+          and I spend a lot of time on trails.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Career highlights -->
+  <section class="section" style="padding-top: 0;">
+    <div class="container">
+      <div class="section__header">
+        <span class="section__label">Career</span>
+        <h2 class="section__title">Selected roles</h2>
+        <hr class="section__divider" />
+      </div>
+      <div class="timeline">
+        <div class="timeline__item">
+          <div class="timeline__marker" style="--accent: var(--cyan);"></div>
+          <div class="timeline__content">
+            <span class="timeline__date">2025 &ndash; Present</span>
+            <h3 class="timeline__role">Co-Founder &amp; CTO</h3>
+            <span class="timeline__org">Earthineering</span>
+            <p>Building at the intersection of AI, earth sciences, and engineering.</p>
+          </div>
+        </div>
+        <div class="timeline__item">
+          <div class="timeline__marker" style="--accent: var(--magenta);"></div>
+          <div class="timeline__content">
+            <span class="timeline__date">2022 &ndash; 2025</span>
+            <h3 class="timeline__role">Group Director, Infrastructure &amp; AI</h3>
+            <span class="timeline__org">Walmart Global Tech</span>
+            <p>Led identity, interoperability, information management, and AI for Health &amp; Wellness.</p>
+          </div>
+        </div>
+        <div class="timeline__item">
+          <div class="timeline__marker" style="--accent: var(--amber);"></div>
+          <div class="timeline__content">
+            <span class="timeline__date">2017 &ndash; 2022</span>
+            <h3 class="timeline__role">Co-Founder &amp; CTO</h3>
+            <span class="timeline__org">Myia Labs</span>
+            <p>Built an intelligent health platform for monitoring and engaging patients with chronic conditions.</p>
+          </div>
+        </div>
+        <div class="timeline__item">
+          <div class="timeline__marker" style="--accent: var(--coral);"></div>
+          <div class="timeline__content">
+            <span class="timeline__date">2012 &ndash; 2018</span>
+            <h3 class="timeline__role">Chief Scientist</h3>
+            <span class="timeline__org">PokitDok</span>
+            <p>Healthcare transaction platform — consumer marketplace, claims, provider networks, pricing intelligence.</p>
+          </div>
+        </div>
+        <div class="timeline__item">
+          <div class="timeline__marker" style="--accent: var(--blue);"></div>
+          <div class="timeline__content">
+            <span class="timeline__date">1998 &ndash; 2004</span>
+            <h3 class="timeline__role">PhD, Neuroscience</h3>
+            <span class="timeline__org">California Institute of Technology</span>
+            <p>Molecular and cellular neurobiology. Local control of synaptic strength via dendritic protein synthesis.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Expertise -->
+  <section class="section">
+    <div class="container">
+      <div class="section__header">
+        <span class="section__label">Expertise</span>
+        <h2 class="section__title">What I work with</h2>
+        <hr class="section__divider" />
+      </div>
+      <div class="grid grid--3">
+        <div class="card card--accent-cyan">
+          <h4>AI &amp; Machine Learning</h4>
+          <p>
+            Statistical modeling, NLP, computer vision, recommendation systems,
+            predictive analytics. From Bayesian networks to transformer architectures.
+          </p>
+          <div class="tag-group">
+            <span class="tag">Python</span>
+            <span class="tag">PyTorch</span>
+            <span class="tag">Scikit-learn</span>
+            <span class="tag">NLP</span>
+            <span class="tag">Computer Vision</span>
+          </div>
+        </div>
+        <div class="card card--accent-magenta">
+          <h4>Data &amp; Infrastructure</h4>
+          <p>
+            End-to-end data strategy — pipelines, warehousing, governance, APIs,
+            integrations. Building data organizations from the ground up.
+          </p>
+          <div class="tag-group">
+            <span class="tag">AWS</span>
+            <span class="tag">Spark</span>
+            <span class="tag">SQL</span>
+            <span class="tag">Kafka</span>
+            <span class="tag">Airflow</span>
+          </div>
+        </div>
+        <div class="card card--accent-amber">
+          <h4>Visualization &amp; Communication</h4>
+          <p>
+            Interactive data visualization, scientific communication, translating
+            complex technical work for executives and stakeholders.
+          </p>
+          <div class="tag-group">
+            <span class="tag">D3.js</span>
+            <span class="tag">Observable</span>
+            <span class="tag">Gephi</span>
+            <span class="tag">R</span>
+            <span class="tag">Julia</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Interests -->
+  <section class="section">
+    <div class="container container--narrow">
+      <div class="section__header">
+        <span class="section__label">Outside work</span>
+        <h2 class="section__title">Interests</h2>
+        <hr class="section__divider" />
+      </div>
+      <div class="interests">
+        <div class="interest">
+          <h4>Photography</h4>
+          <p>
+            Landscapes, macro, and abstract photography — often inspired by
+            my home state of California. My gallery lives at
+            <a href="https://picgraf.com" target="_blank" rel="noopener">picgraf.com</a>.
+          </p>
+        </div>
+        <div class="interest">
+          <h4>Trail Running</h4>
+          <p>
+            The best way to think through a hard problem is on a trail
+            with no cell service.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <ContactForm />
+</Base>
+
+<style>
+  .hero {
+    position: relative;
+    z-index: 1;
+    padding: var(--space-4xl) 0 var(--space-3xl);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .hero__grid {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: var(--space-3xl);
+    align-items: center;
+  }
+
+  .hero__label {
+    font-family: var(--font-mono);
+    font-size: var(--size-sm);
+    color: var(--cyan);
+    letter-spacing: 0.05em;
+    margin-bottom: var(--space-md);
+  }
+
+  .hero__title {
+    font-size: clamp(2.5rem, 6vw, 4.5rem);
+    font-weight: 700;
+    line-height: 1.08;
+    letter-spacing: -0.03em;
+    margin-bottom: var(--space-xl);
+  }
+
+  .hero__accent {
+    background: linear-gradient(135deg, var(--cyan), var(--magenta));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero__sub {
+    font-size: var(--size-lg);
+    color: var(--text-secondary);
+    max-width: 36rem;
+    line-height: 1.6;
+  }
+
+  .hero__photo {
+    flex-shrink: 0;
+  }
+
+  .hero__photo-frame {
+    width: 240px;
+    height: 300px;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border: 1px solid var(--border-medium);
+    background: var(--bg-surface);
+  }
+
+  .hero__photo-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: var(--size-sm);
+  }
+
+  @media (max-width: 768px) {
+    .hero__grid {
+      grid-template-columns: 1fr;
+      text-align: center;
+    }
+
+    .hero__sub {
+      margin: 0 auto;
+    }
+
+    .hero__photo {
+      display: none;
+    }
+  }
+
+  .about__body {
+    font-size: var(--size-lg);
+    line-height: 1.8;
+  }
+
+  .about__body p {
+    color: var(--text-secondary);
+  }
+
+  .timeline {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xl);
+    max-width: var(--content-width);
+  }
+
+  .timeline__item {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--space-lg);
+  }
+
+  .timeline__marker {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--accent, var(--cyan));
+    margin-top: 0.5rem;
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .timeline__marker::after {
+    content: '';
+    position: absolute;
+    top: 14px;
+    left: 4px;
+    width: 2px;
+    height: calc(100% + var(--space-xl) - 4px);
+    background: var(--border-subtle);
+  }
+
+  .timeline__item:last-child .timeline__marker::after {
+    display: none;
+  }
+
+  .timeline__date {
+    font-family: var(--font-mono);
+    font-size: var(--size-xs);
+    color: var(--text-muted);
+  }
+
+  .timeline__role {
+    font-size: var(--size-xl);
+    margin: var(--space-xs) 0;
+  }
+
+  .timeline__org {
+    font-size: var(--size-sm);
+    color: var(--text-muted);
+    display: block;
+    margin-bottom: var(--space-sm);
+  }
+
+  .timeline__content p {
+    font-size: var(--size-sm);
+    color: var(--text-secondary);
+  }
+
+  .tag-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    margin-top: var(--space-md);
+  }
+
+  .interests {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xl);
+  }
+
+  .interest h4 {
+    margin-bottom: var(--space-sm);
+    color: var(--text-primary);
+  }
+
+  .interest p {
+    font-size: var(--size-lg);
+    color: var(--text-secondary);
+  }
+</style>

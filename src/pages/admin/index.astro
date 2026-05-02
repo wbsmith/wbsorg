@@ -1,0 +1,53 @@
+---
+import Base from '../../layouts/Base.astro';
+
+export const prerender = true;
+---
+
+<Base title="Admin — W. Bryan Smith">
+  <section class="section">
+    <div class="container container--narrow">
+      <div class="section__header">
+        <span class="section__label">Admin</span>
+        <h1 class="section__title">Site Administration</h1>
+        <hr class="section__divider" />
+      </div>
+      <div class="admin__placeholder">
+        <div class="admin__card">
+          <h3>Content Editor</h3>
+          <p>Edit page content, bio text, and project descriptions without redeploying.</p>
+          <span class="tag">Coming soon</span>
+        </div>
+        <div class="admin__card">
+          <h3>Email Inquiries</h3>
+          <p>View and manage contact form submissions.</p>
+          <span class="tag">Coming soon</span>
+        </div>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .admin__placeholder {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xl);
+    margin-top: var(--space-xl);
+  }
+
+  .admin__card {
+    padding: var(--space-xl);
+    border: 1px dashed var(--border-subtle);
+    border-radius: var(--radius-md);
+  }
+
+  .admin__card h3 {
+    margin-bottom: var(--space-sm);
+  }
+
+  .admin__card p {
+    color: var(--text-secondary);
+    margin-bottom: var(--space-md);
+  }
+</style>

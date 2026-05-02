@@ -1,0 +1,156 @@
+---
+import Base from '../../layouts/Base.astro';
+
+export const prerender = true;
+
+const papers = [
+  {
+    title: 'Dopaminergic stimulation of local protein synthesis enhances surface expression of GluR1 and synaptic transmission in hippocampal neurons',
+    venue: 'Neuron',
+    type: 'peer-reviewed',
+  },
+  {
+    title: 'A role for endothelial NO synthase in LTP revealed by adenovirus-mediated inhibition and rescue',
+    venue: 'Neuroscience',
+    type: 'peer-reviewed',
+  },
+  {
+    title: 'Dynamic visualization of local protein synthesis in hippocampal neurons',
+    venue: 'Neuron',
+    type: 'peer-reviewed',
+  },
+  {
+    title: 'Activation-dependent changes in receptor distribution and dendritic morphology in hippocampal neurons expressing P2X2-green fluorescent protein receptors',
+    venue: 'Journal of Neuroscience',
+    type: 'peer-reviewed',
+  },
+  {
+    title: 'Golgi twins in late mitosis revealed by genetically encoded tags for live cell imaging and correlated electron microscopy',
+    venue: 'PNAS',
+    type: 'peer-reviewed',
+  },
+];
+
+const patents = [
+  {
+    title: 'A Multivariate Computational System And Method For Optimal Healthcare Service Pricing',
+    status: 'Granted',
+  },
+];
+---
+
+<Base title="Writing — W. Bryan Smith">
+  <section class="section">
+    <div class="container container--narrow">
+      <div class="section__header">
+        <span class="section__label">Writing</span>
+        <h1 class="section__title">Papers, patents &amp; posts</h1>
+        <p class="writing__intro">
+          Academic publications from my neuroscience research, patents from
+          healthcare technology work, and occasional writing on topics I
+          find interesting.
+        </p>
+        <hr class="section__divider" />
+      </div>
+
+      <!-- Blog posts -->
+      <div class="writing__section">
+        <h2>Blog</h2>
+        <div class="writing__empty">
+          <p>Posts coming soon.</p>
+        </div>
+      </div>
+
+      <!-- Publications -->
+      <div class="writing__section">
+        <h2>Peer-Reviewed Publications</h2>
+        <ul class="pub-list">
+          {papers.map(paper => (
+            <li class="pub-item">
+              <span class="pub-item__title">{paper.title}</span>
+              <span class="pub-item__venue">{paper.venue}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <!-- Patents -->
+      <div class="writing__section">
+        <h2>Patents</h2>
+        <ul class="pub-list">
+          {patents.map(patent => (
+            <li class="pub-item">
+              <span class="pub-item__title">{patent.title}</span>
+              <span class="pub-item__venue">{patent.status}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .writing__intro {
+    font-size: var(--size-lg);
+    color: var(--text-secondary);
+    max-width: 40rem;
+    margin-top: var(--space-md);
+  }
+
+  .writing__section {
+    margin-top: var(--space-3xl);
+  }
+
+  .writing__section h2 {
+    font-size: var(--size-xl);
+    margin-bottom: var(--space-xl);
+    padding-bottom: var(--space-sm);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .writing__empty {
+    padding: var(--space-2xl);
+    text-align: center;
+    border: 1px dashed var(--border-subtle);
+    border-radius: var(--radius-md);
+  }
+
+  .writing__empty p {
+    font-family: var(--font-mono);
+    font-size: var(--size-sm);
+    color: var(--text-muted);
+  }
+
+  .pub-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+  }
+
+  .pub-item {
+    padding-left: var(--space-lg);
+    border-left: 2px solid var(--border-subtle);
+    transition: border-color 0.3s;
+  }
+
+  .pub-item:hover {
+    border-left-color: var(--cyan);
+  }
+
+  .pub-item__title {
+    display: block;
+    color: var(--text-primary);
+    font-size: var(--size-base);
+    line-height: 1.5;
+  }
+
+  .pub-item__venue {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: var(--size-xs);
+    color: var(--text-muted);
+    margin-top: var(--space-xs);
+  }
+</style>

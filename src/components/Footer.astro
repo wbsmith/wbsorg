@@ -1,0 +1,64 @@
+---
+const year = new Date().getFullYear();
+---
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer__inner">
+      <div class="footer__left">
+        <span class="footer__name">W. Bryan Smith, PhD</span>
+        <span class="footer__sep">&middot;</span>
+        <span class="footer__copy">&copy; {year}</span>
+      </div>
+      <div class="footer__links">
+        <a href="https://www.linkedin.com/in/wbryansmithphd" target="_blank" rel="noopener">LinkedIn</a>
+        <a href="mailto:wbsmith@gmail.com">Contact</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .footer {
+    position: relative;
+    z-index: 1;
+    border-top: 1px solid var(--border-subtle);
+    padding: var(--space-xl) 0;
+  }
+
+  .footer__inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+  }
+
+  .footer__left {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    font-size: var(--size-sm);
+    color: var(--text-muted);
+  }
+
+  .footer__name {
+    font-family: var(--font-display);
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+
+  .footer__links {
+    display: flex;
+    gap: var(--space-lg);
+  }
+
+  .footer__links a {
+    font-size: var(--size-sm);
+    color: var(--text-muted);
+  }
+
+  .footer__links a:hover {
+    color: var(--cyan);
+  }
+</style>

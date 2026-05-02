@@ -1,0 +1,154 @@
+---
+import Base from '../../layouts/Base.astro';
+
+export const prerender = true;
+
+const projects = [
+  {
+    name: 'Userdata.io',
+    url: 'https://userdata.io',
+    accent: 'cyan',
+    description: 'Identity infrastructure for individuals and enterprises. Discover which data breaches you\'ve been exposed to, import your data from platforms like Google and Meta, and control what\'s shared. Enterprise APIs for consent orchestration and identity verification.',
+    tags: ['Privacy', 'Identity', 'APIs', 'Data Rights'],
+  },
+  {
+    name: 'NewsReal.ai',
+    url: 'https://newsreal.ai',
+    accent: 'magenta',
+    description: 'AI-powered news aggregation and analysis. Curates and comments on stories from major sources across politics, technology, finance, world events, and science. Transparent about its nature — labeled as AI-generated analysis, not journalism.',
+    tags: ['AI', 'NLP', 'News', 'Analysis'],
+  },
+  {
+    name: 'Picgraf',
+    url: 'https://picgraf.com',
+    accent: 'amber',
+    description: 'A web-based photo gallery for my photography work. Landscapes, macro, and abstract photography, often inspired by my home state of California.',
+    tags: ['Photography', 'Gallery', 'Web'],
+  },
+  {
+    name: 'World in Wonder',
+    url: 'https://worldinwonder.com',
+    accent: 'coral',
+    description: 'Nature-based programs for young explorers in Marin County. Outdoor day camps, single-day adventures, and nature education experiences for school groups — hands-on learning in natural settings.',
+    tags: ['Education', 'Nature', 'Youth Programs'],
+  },
+];
+---
+
+<Base title="Projects — W. Bryan Smith">
+  <section class="section">
+    <div class="container">
+      <div class="section__header">
+        <span class="section__label">Projects</span>
+        <h1 class="section__title">Things I've built</h1>
+        <p class="projects__intro">
+          Independent products I've created outside of my day job, each addressing
+          a problem I wanted solved.
+        </p>
+        <hr class="section__divider" />
+      </div>
+      <div class="projects__grid">
+        {projects.map(project => (
+          <a href={project.url} target="_blank" rel="noopener" class="project-card">
+            <div class={`project-card__accent project-card__accent--${project.accent}`}></div>
+            <div class="project-card__body">
+              <h2 class="project-card__name">{project.name}</h2>
+              <p class="project-card__desc">{project.description}</p>
+              <div class="project-card__tags">
+                {project.tags.map(tag => (
+                  <span class="tag">{tag}</span>
+                ))}
+              </div>
+              <span class="project-card__link">
+                {project.url.replace('https://', '')} &rarr;
+              </span>
+            </div>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .projects__intro {
+    font-size: var(--size-lg);
+    color: var(--text-secondary);
+    max-width: 40rem;
+    margin-top: var(--space-md);
+  }
+
+  .projects__grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-xl);
+  }
+
+  @media (max-width: 768px) {
+    .projects__grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .project-card {
+    display: flex;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    transition: border-color 0.3s, background-color 0.3s, transform 0.2s;
+    color: inherit;
+  }
+
+  .project-card:hover {
+    border-color: var(--border-medium);
+    background: var(--bg-elevated);
+    transform: translateY(-2px);
+    color: inherit;
+  }
+
+  .project-card__accent {
+    width: 4px;
+    flex-shrink: 0;
+  }
+
+  .project-card__accent--cyan { background: var(--cyan); }
+  .project-card__accent--magenta { background: var(--magenta); }
+  .project-card__accent--amber { background: var(--amber); }
+  .project-card__accent--coral { background: var(--coral); }
+
+  .project-card__body {
+    padding: var(--space-xl);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  .project-card__name {
+    font-size: var(--size-2xl);
+  }
+
+  .project-card__desc {
+    color: var(--text-secondary);
+    font-size: var(--size-base);
+    line-height: 1.7;
+    flex: 1;
+  }
+
+  .project-card__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+  }
+
+  .project-card__link {
+    font-family: var(--font-mono);
+    font-size: var(--size-sm);
+    color: var(--text-muted);
+    transition: color 0.2s;
+  }
+
+  .project-card:hover .project-card__link {
+    color: var(--cyan);
+  }
+</style>

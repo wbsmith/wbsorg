@@ -1,0 +1,67 @@
+---
+import Base from '../../layouts/Base.astro';
+
+export const prerender = true;
+---
+
+<Base title="Photos — W. Bryan Smith">
+  <section class="section">
+    <div class="container">
+      <div class="section__header">
+        <span class="section__label">Photography</span>
+        <h1 class="section__title">Photos</h1>
+        <p class="photos__intro">
+          Landscapes, macro, and abstract photography — a curated selection
+          of work that made me stop moving. The full gallery lives at
+          <a href="https://picgraf.com" target="_blank" rel="noopener">picgraf.com</a>.
+        </p>
+        <hr class="section__divider" />
+      </div>
+      <div class="photos__placeholder">
+        <div class="photos__empty">
+          <span class="photos__icon">&#9634;</span>
+          <p>Gallery coming soon</p>
+          <p class="photos__sub">Curated selections will appear here.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .photos__intro {
+    font-size: var(--size-lg);
+    color: var(--text-secondary);
+    max-width: 40rem;
+    margin-top: var(--space-md);
+  }
+
+  .photos__placeholder {
+    margin-top: var(--space-xl);
+  }
+
+  .photos__empty {
+    padding: var(--space-4xl) var(--space-xl);
+    text-align: center;
+    border: 1px dashed var(--border-subtle);
+    border-radius: var(--radius-md);
+  }
+
+  .photos__icon {
+    font-size: 3rem;
+    color: var(--text-muted);
+    display: block;
+    margin-bottom: var(--space-md);
+  }
+
+  .photos__empty p {
+    font-family: var(--font-mono);
+    font-size: var(--size-sm);
+    color: var(--text-muted);
+  }
+
+  .photos__sub {
+    margin-top: var(--space-xs);
+    font-size: var(--size-xs) !important;
+  }
+</style>
