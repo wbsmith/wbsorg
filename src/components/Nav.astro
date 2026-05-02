@@ -14,11 +14,7 @@ const links = [
 <nav class="nav">
   <div class="nav__inner container">
     <a href="/" class="nav__logo">wbs</a>
-    <button class="nav__toggle" aria-label="Toggle menu" aria-expanded="false">
-      <span></span>
-      <span></span>
-    </button>
-    <ul class="nav__links" role="list">
+    <ul class="nav__links-desktop" role="list">
       {links.map(link => (
         <li>
           <a
@@ -30,8 +26,33 @@ const links = [
         </li>
       ))}
     </ul>
+    <button class="nav__toggle" aria-label="Open menu">
+      <span></span>
+      <span></span>
+    </button>
   </div>
 </nav>
+
+<dialog class="nav__dialog" id="nav-dialog">
+  <div class="nav__dialog-header">
+    <button class="nav__dialog-close" aria-label="Close menu">
+      <span></span>
+      <span></span>
+    </button>
+  </div>
+  <ul class="nav__dialog-links" role="list">
+    {links.map(link => (
+      <li>
+        <a
+          href={link.href}
+          class:list={['nav__link', { 'nav__link--active': currentPath === link.href || (link.href !== '/' && currentPath.startsWith(link.href)) }]}
+        >
+          {link.label}
+        </a>
+      </li>
+    ))}
+  </ul>
+</dialog>
 
 <style>
   .nav {
@@ -63,7 +84,7 @@ const links = [
     color: var(--cyan);
   }
 
-  .nav__links {
+  .nav__links-desktop {
     display: flex;
     gap: var(--space-lg);
     list-style: none;
@@ -121,7 +142,68 @@ const links = [
     width: 20px;
     height: 2px;
     background: var(--text-primary);
-    transition: transform 0.3s, opacity 0.3s;
+  }
+
+  /* Dialog (mobile menu) */
+  .nav__dialog {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    max-height: 100%;
+    margin: 0;
+    padding: var(--space-2xl);
+    background: var(--bg-deep);
+    border: none;
+    color: var(--text-primary);
+    z-index: 200;
+  }
+
+  .nav__dialog::backdrop {
+    background: rgba(0, 0, 0, 0.6);
+  }
+
+  .nav__dialog-header {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: var(--space-3xl);
+  }
+
+  .nav__dialog-close {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: var(--space-xs);
+  }
+
+  .nav__dialog-close span {
+    display: block;
+    width: 20px;
+    height: 2px;
+    background: var(--text-primary);
+  }
+
+  .nav__dialog-close span:first-child {
+    transform: translateY(1px) rotate(45deg);
+  }
+
+  .nav__dialog-close span:last-child {
+    transform: translateY(-1px) rotate(-45deg);
+  }
+
+  .nav__dialog-links {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xl);
+  }
+
+  .nav__dialog-links .nav__link {
+    font-size: var(--size-2xl);
   }
 
   @media (max-width: 768px) {
@@ -129,52 +211,34 @@ const links = [
       display: flex;
     }
 
-    .nav__links {
-      position: fixed;
-      top: 3.5rem;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      flex-direction: column;
-      background: rgba(6, 6, 11, 0.97);
-      padding: var(--space-2xl);
-      gap: var(--space-xl);
-      transform: translateX(100%);
-      transition: transform 0.3s;
+    .nav__links-desktop {
+      display: none;
     }
+  }
 
-    .nav__links.open {
-      transform: translateX(0);
-    }
-
-    .nav__link {
-      font-size: var(--size-xl);
-    }
-
-    .nav__toggle[aria-expanded="true"] span:first-child {
-      transform: translateY(3.5px) rotate(45deg);
-    }
-
-    .nav__toggle[aria-expanded="true"] span:last-child {
-      transform: translateY(-3.5px) rotate(-45deg);
+  @media (min-width: 769px) {
+    .nav__dialog {
+      display: none;
     }
   }
 </style>
 
 <script>
-  const toggle = document.querySelector('.nav__toggle');
-  const links = document.querySelector('.nav__links');
+  const toggle = document.querySelector('.nav__toggle') as HTMLButtonElement;
+  const dialog = document.getElementById('nav-dialog') as HTMLDialogElement;
+  const close = dialog?.querySelector('.nav__dialog-close') as HTMLButtonElement;
 
   toggle?.addEventListener('click', () => {
-    const expanded = toggle.getAttribute('aria-expanded') === 'true';
-    toggle.setAttribute('aria-expanded', String(!expanded));
-    links?.classList.toggle('open');
+    dialog?.showModal();
   });
 
-  links?.querySelectorAll('a').forEach(link => {
+  close?.addEventListener('click', () => {
+    dialog?.close();
+  });
+
+  dialog?.querySelectorAll('a').forEach(link => {
     link.addEventListener('click', () => {
-      toggle?.setAttribute('aria-expanded', 'false');
-      links.classList.remove('open');
+      dialog.close();
     });
   });
 </script>

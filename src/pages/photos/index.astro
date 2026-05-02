@@ -1,6 +1,5 @@
 ---
 import Base from '../../layouts/Base.astro';
-
 ---
 
 <Base title="Photos — W. Bryan Smith">
@@ -16,16 +15,37 @@ import Base from '../../layouts/Base.astro';
         </p>
         <hr class="section__divider" />
       </div>
-      <div class="photos__placeholder">
-        <div class="photos__empty">
-          <span class="photos__icon">&#9634;</span>
-          <p>Gallery coming soon</p>
-          <p class="photos__sub">Curated selections will appear here.</p>
+      <div class="photos__grid">
+        <div class="photos__slot" data-slot="0">
+          <div class="photos__empty-slot"></div>
+        </div>
+        <div class="photos__slot" data-slot="1">
+          <div class="photos__empty-slot"></div>
+        </div>
+        <div class="photos__slot" data-slot="2">
+          <div class="photos__empty-slot"></div>
         </div>
       </div>
     </div>
   </section>
 </Base>
+
+<script>
+  import { api } from '../../lib/api-client';
+
+  async function loadPhotos() {
+    try {
+      const data = await api.getContent('photos');
+      if (!data.content?.slots) return;
+      data.content.slots.forEach((url: string, i: number) => {
+        if (!url) return;
+        const slot = document.querySelector(`[data-slot="${i}"]`);
+        if (slot) slot.innerHTML = `<img src="${url}" alt="Photo ${i + 1}" loading="lazy" />`;
+      });
+    } catch { /* keep empty slots */ }
+  }
+  loadPhotos();
+</script>
 
 <style>
   .photos__intro {
@@ -35,32 +55,36 @@ import Base from '../../layouts/Base.astro';
     margin-top: var(--space-md);
   }
 
-  .photos__placeholder {
-    margin-top: var(--space-xl);
+  .photos__grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-xl);
+    margin-top: var(--space-2xl);
   }
 
-  .photos__empty {
-    padding: var(--space-4xl) var(--space-xl);
-    text-align: center;
-    border: 1px dashed var(--border-subtle);
+  @media (max-width: 768px) {
+    .photos__grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .photos__slot {
+    aspect-ratio: 3 / 2;
     border-radius: var(--radius-md);
+    overflow: hidden;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
   }
 
-  .photos__icon {
-    font-size: 3rem;
-    color: var(--text-muted);
-    display: block;
-    margin-bottom: var(--space-md);
+  .photos__slot img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
 
-  .photos__empty p {
-    font-family: var(--font-mono);
-    font-size: var(--size-sm);
-    color: var(--text-muted);
-  }
-
-  .photos__sub {
-    margin-top: var(--space-xs);
-    font-size: var(--size-xs) !important;
+  .photos__empty-slot {
+    width: 100%;
+    height: 100%;
+    background: var(--bg-surface);
   }
 </style>

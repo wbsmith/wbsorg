@@ -10,13 +10,13 @@ import ContactForm from '../components/ContactForm.astro';
     <div class="container">
       <div class="hero__grid">
         <div class="hero__text">
-          <p class="hero__label">W. Bryan Smith, PhD</p>
+          <p class="hero__label" data-content="heroLabel">W. Bryan Smith, PhD</p>
           <h1 class="hero__title">
             Science, data,<br />
             and the things<br />
             <span class="hero__accent">between.</span>
           </h1>
-          <p class="hero__sub">
+          <p class="hero__sub" data-content="heroSub">
             Building at the intersection of neuroscience, AI,
             and the systems that connect them to real decisions.
           </p>
@@ -38,7 +38,7 @@ import ContactForm from '../components/ContactForm.astro';
         <h2 class="section__title">Background</h2>
         <hr class="section__divider" />
       </div>
-      <div class="about__body">
+      <div class="about__body" data-content="aboutParagraphs">
         <p>
           I'm a multidisciplinary technical leader with a career that started in
           the wet lab and moved through computational neuroscience, data science,
@@ -209,6 +209,11 @@ import ContactForm from '../components/ContactForm.astro';
 
   <ContactForm />
 </Base>
+
+<script>
+  import { loadContent } from '../lib/content-loader';
+  loadContent('home');
+</script>
 
 <style>
   .hero {

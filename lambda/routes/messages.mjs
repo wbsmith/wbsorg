@@ -1,0 +1,64 @@
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { DynamoDBDocumentClient, ScanCommand, UpdateCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
+
+const client = DynamoDBDocumentClient.from(new DynamoDBClient({ region: 'us-west-1' }));
+const TABLE = 'wbs-messages';
+
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Content-Type': 'application/json',
+};
+
+function json(statusCode, body) {
+  return { statusCode, headers: CORS_HEADERS, body: JSON.stringify(body) };
+}
+
+export async function handleMessages(method, path, event) {
+  if (method === 'GET' && path === '/api/messages') {
+    const result = await client.send(new ScanCommand({ TableName: TABLE }));
+    const items = (result.Items || []).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    return json(200, { messages: items });
+  }
+
+  const parts = path.split('/');
+  const messageId = parts[3];
+
+  if (!messageId) return json(400, { error: 'messageId required' });
+
+  if (method === 'PATCH') {
+    const body = JSON.parse(event.body || '{}');
+    const item = await findMessage(messageId);
+    if (!item) return json(404, { error: 'Message not found' });
+
+    await client.send(new UpdateCommand({
+      TableName: TABLE,
+      Key: { messageId, createdAt: item.createdAt },
+      UpdateExpression: 'SET #s = :status',
+      ExpressionAttributeNames: { '#s': 'status' },
+      ExpressionAttributeValues: { ':status': body.status || 'read' },
+    }));
+    return json(200, { ok: true });
+  }
+
+  if (method === 'DELETE') {
+    const item = await findMessage(messageId);
+    if (!item) return json(404, { error: 'Message not found' });
+
+    await client.send(new DeleteCommand({
+      TableName: TABLE,
+      Key: { messageId, createdAt: item.createdAt },
+    }));
+    return json(200, { ok: true });
+  }
+
+  return json(405, { error: 'Method not allowed' });
+}
+
+async function findMessage(messageId) {
+  const result = await client.send(new ScanCommand({
+    TableName: TABLE,
+    FilterExpression: 'messageId = :id',
+    ExpressionAttributeValues: { ':id': messageId },
+  }));
+  return result.Items?.[0];
+}

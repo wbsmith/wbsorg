@@ -113,17 +113,34 @@
 </style>
 
 <script>
+  import { api } from '../lib/api-client';
+
   const form = document.getElementById('contact-form') as HTMLFormElement;
+  const status = document.getElementById('contact-status')!;
+  const submit = form.querySelector('button[type="submit"]') as HTMLButtonElement;
 
-  form.addEventListener('submit', (e) => {
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const data = new FormData(form);
-    const name = data.get('name') as string;
-    const email = data.get('email') as string;
-    const message = data.get('message') as string;
+    submit.disabled = true;
+    status.textContent = 'Sending...';
+    status.className = 'contact-form__status';
 
-    const subject = encodeURIComponent(`Message from ${name}`);
-    const body = encodeURIComponent(`From: ${name} (${email})\n\n${message}`);
-    window.location.href = `mailto:hello@wbryansmith.org?subject=${subject}&body=${body}`;
+    const data = new FormData(form);
+
+    try {
+      await api.postContact({
+        name: data.get('name') as string,
+        email: data.get('email') as string,
+        message: data.get('message') as string,
+      });
+      status.textContent = 'Sent — thanks for reaching out.';
+      status.className = 'contact-form__status success';
+      form.reset();
+    } catch {
+      status.textContent = 'Something went wrong. Try emailing hello@wbryansmith.org directly.';
+      status.className = 'contact-form__status error';
+    } finally {
+      submit.disabled = false;
+    }
   });
 </script>

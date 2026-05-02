@@ -1,52 +1,411 @@
 ---
-import Base from '../../layouts/Base.astro';
-
+import '../../styles/global.css';
+import '../../styles/admin.css';
 ---
 
-<Base title="Admin — W. Bryan Smith">
-  <section class="section">
-    <div class="container container--narrow">
-      <div class="section__header">
-        <span class="section__label">Admin</span>
-        <h1 class="section__title">Site Administration</h1>
-        <hr class="section__divider" />
-      </div>
-      <div class="admin__placeholder">
-        <div class="admin__card">
-          <h3>Content Editor</h3>
-          <p>Edit page content, bio text, and project descriptions without redeploying.</p>
-          <span class="tag">Coming soon</span>
-        </div>
-        <div class="admin__card">
-          <h3>Email Inquiries</h3>
-          <p>View and manage contact form submissions.</p>
-          <span class="tag">Coming soon</span>
-        </div>
-      </div>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <title>Admin — W. Bryan Smith</title>
+</head>
+<body>
+
+<!-- Login -->
+<div id="login-view" class="admin-login" style="display:none;">
+  <h1>Admin</h1>
+  <form id="login-form">
+    <div class="admin-login__field">
+      <label for="login-email">Email</label>
+      <input type="email" id="login-email" required autocomplete="email" />
     </div>
-  </section>
-</Base>
+    <div class="admin-login__field">
+      <label for="login-password">Password</label>
+      <input type="password" id="login-password" required autocomplete="current-password" />
+    </div>
+    <button type="submit" class="admin-btn">Sign In</button>
+    <p id="login-error" class="admin-error" style="display:none;"></p>
+  </form>
+  <!-- New password form (Cognito first login) -->
+  <form id="new-password-form" style="display:none;">
+    <p style="color:var(--text-secondary);margin-bottom:var(--space-md);">Set a new password:</p>
+    <div class="admin-login__field">
+      <label for="new-password">New Password</label>
+      <input type="password" id="new-password" required minlength="12" autocomplete="new-password" />
+    </div>
+    <button type="submit" class="admin-btn">Set Password</button>
+    <p id="new-password-error" class="admin-error" style="display:none;"></p>
+  </form>
+</div>
 
-<style>
-  .admin__placeholder {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-xl);
-    margin-top: var(--space-xl);
+<!-- Dashboard -->
+<div id="dashboard-view" style="display:none;">
+  <nav class="nav" style="position:relative;">
+    <div class="nav__inner container">
+      <a href="/" class="nav__logo">wbs</a>
+      <span style="font-family:var(--font-mono);font-size:var(--size-xs);color:var(--text-muted);">admin</span>
+    </div>
+  </nav>
+  <div class="admin-dashboard">
+    <aside class="admin-sidebar">
+      <button class="admin-sidebar__link admin-sidebar__link--active" data-section="home">Home</button>
+      <button class="admin-sidebar__link" data-section="projects">Projects</button>
+      <button class="admin-sidebar__link" data-section="photos">Photos</button>
+      <button class="admin-sidebar__link" data-section="dataviz">Data Viz</button>
+      <button class="admin-sidebar__link" data-section="writing">Writing</button>
+      <button class="admin-sidebar__link" data-section="messages">Messages</button>
+      <button class="admin-sidebar__signout" id="signout-btn">Sign out</button>
+    </aside>
+    <div class="admin-main">
+
+      <!-- Home editor -->
+      <div class="admin-section admin-section--active" id="section-home">
+        <h2>Home Page</h2>
+        <div class="admin-field">
+          <label for="edit-heroLabel">Hero Label</label>
+          <input type="text" id="edit-heroLabel" />
+        </div>
+        <div class="admin-field">
+          <label for="edit-heroSub">Hero Subtitle</label>
+          <textarea id="edit-heroSub" rows="3"></textarea>
+        </div>
+        <div class="admin-field">
+          <label for="edit-aboutP1">About — Paragraph 1</label>
+          <textarea id="edit-aboutP1" rows="5"></textarea>
+        </div>
+        <div class="admin-field">
+          <label for="edit-aboutP2">About — Paragraph 2</label>
+          <textarea id="edit-aboutP2" rows="5"></textarea>
+        </div>
+        <div class="admin-field">
+          <label for="edit-aboutP3">About — Paragraph 3</label>
+          <textarea id="edit-aboutP3" rows="5"></textarea>
+        </div>
+        <button class="admin-btn" id="save-home">Save</button>
+        <p id="home-status" style="display:none;"></p>
+      </div>
+
+      <!-- Projects editor -->
+      <div class="admin-section" id="section-projects">
+        <h2>Projects</h2>
+        <p style="color:var(--text-muted);font-family:var(--font-mono);font-size:var(--size-sm);">Project editing coming soon.</p>
+      </div>
+
+      <!-- Photos manager -->
+      <div class="admin-section" id="section-photos">
+        <h2>Photos</h2>
+        <p style="color:var(--text-secondary);margin-bottom:var(--space-xl);">Drag and drop images into the 3 slots below.</p>
+        <div class="admin-slots admin-slots--3" id="photo-slots"></div>
+        <button class="admin-btn" id="save-photos" style="margin-top:var(--space-xl);">Save</button>
+        <p id="photos-status" style="display:none;"></p>
+      </div>
+
+      <!-- DataViz manager -->
+      <div class="admin-section" id="section-dataviz">
+        <h2>Data Viz</h2>
+        <p style="color:var(--text-secondary);margin-bottom:var(--space-xl);">Drag and drop images or videos into the 6 slots below.</p>
+        <div class="admin-slots admin-slots--6" id="dataviz-slots"></div>
+        <button class="admin-btn" id="save-dataviz" style="margin-top:var(--space-xl);">Save</button>
+        <p id="dataviz-status" style="display:none;"></p>
+      </div>
+
+      <!-- Writing editor -->
+      <div class="admin-section" id="section-writing">
+        <h2>Writing</h2>
+        <p style="color:var(--text-muted);font-family:var(--font-mono);font-size:var(--size-sm);">Writing editor coming soon.</p>
+      </div>
+
+      <!-- Messages -->
+      <div class="admin-section" id="section-messages">
+        <h2>Messages</h2>
+        <div id="messages-container">
+          <p style="color:var(--text-muted);font-family:var(--font-mono);font-size:var(--size-sm);">Loading...</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  import { isAuthenticated, signIn, signOut, completeNewPassword } from '../../lib/auth';
+  import { api } from '../../lib/api-client';
+
+  const loginView = document.getElementById('login-view')!;
+  const dashboardView = document.getElementById('dashboard-view')!;
+
+  // ── Auth ──
+  function showView() {
+    if (isAuthenticated()) {
+      loginView.style.display = 'none';
+      dashboardView.style.display = 'block';
+      loadSection('home');
+    } else {
+      loginView.style.display = 'block';
+      dashboardView.style.display = 'none';
+    }
   }
 
-  .admin__card {
-    padding: var(--space-xl);
-    border: 1px dashed var(--border-subtle);
-    border-radius: var(--radius-md);
+  let pendingSession = '';
+  let pendingEmail = '';
+
+  document.getElementById('login-form')!.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = (document.getElementById('login-email') as HTMLInputElement).value;
+    const password = (document.getElementById('login-password') as HTMLInputElement).value;
+    const errEl = document.getElementById('login-error')!;
+    errEl.style.display = 'none';
+
+    const result = await signIn(email, password);
+    if (result.success) {
+      showView();
+    } else if (result.challenge === 'NEW_PASSWORD_REQUIRED') {
+      pendingSession = result.session!;
+      pendingEmail = email;
+      document.getElementById('login-form')!.style.display = 'none';
+      document.getElementById('new-password-form')!.style.display = 'block';
+    } else {
+      errEl.textContent = result.error || 'Sign in failed';
+      errEl.style.display = 'block';
+    }
+  });
+
+  document.getElementById('new-password-form')!.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const newPw = (document.getElementById('new-password') as HTMLInputElement).value;
+    const errEl = document.getElementById('new-password-error')!;
+    errEl.style.display = 'none';
+
+    const result = await completeNewPassword(pendingSession, pendingEmail, newPw);
+    if (result.success) {
+      showView();
+    } else {
+      errEl.textContent = result.error || 'Failed';
+      errEl.style.display = 'block';
+    }
+  });
+
+  document.getElementById('signout-btn')!.addEventListener('click', () => {
+    signOut();
+    showView();
+  });
+
+  // ── Sidebar navigation ──
+  const sidebarLinks = document.querySelectorAll<HTMLButtonElement>('.admin-sidebar__link');
+  const sections = document.querySelectorAll<HTMLDivElement>('.admin-section');
+
+  sidebarLinks.forEach(link => {
+    link.addEventListener('click', () => {
+      const section = link.getAttribute('data-section')!;
+      sidebarLinks.forEach(l => l.classList.remove('admin-sidebar__link--active'));
+      link.classList.add('admin-sidebar__link--active');
+      sections.forEach(s => s.classList.remove('admin-section--active'));
+      document.getElementById(`section-${section}`)?.classList.add('admin-section--active');
+      loadSection(section);
+    });
+  });
+
+  // ── Section loaders ──
+  const loadedSections = new Set<string>();
+
+  async function loadSection(section: string) {
+    if (loadedSections.has(section)) return;
+    loadedSections.add(section);
+
+    if (section === 'home') await loadHomeEditor();
+    if (section === 'photos') renderSlots('photo-slots', 3, 'photos');
+    if (section === 'dataviz') renderSlots('dataviz-slots', 6, 'dataviz');
+    if (section === 'messages') await loadMessages();
   }
 
-  .admin__card h3 {
-    margin-bottom: var(--space-sm);
+  // ── Home editor ──
+  async function loadHomeEditor() {
+    try {
+      const data = await api.getContent('home');
+      const c = data.content;
+      (document.getElementById('edit-heroLabel') as HTMLInputElement).value = c.heroLabel || '';
+      (document.getElementById('edit-heroSub') as HTMLTextAreaElement).value = c.heroSub || '';
+      const paragraphs = c.aboutParagraphs || [];
+      (document.getElementById('edit-aboutP1') as HTMLTextAreaElement).value = paragraphs[0] || '';
+      (document.getElementById('edit-aboutP2') as HTMLTextAreaElement).value = paragraphs[1] || '';
+      (document.getElementById('edit-aboutP3') as HTMLTextAreaElement).value = paragraphs[2] || '';
+    } catch { /* use empty fields */ }
   }
 
-  .admin__card p {
-    color: var(--text-secondary);
-    margin-bottom: var(--space-md);
+  document.getElementById('save-home')!.addEventListener('click', async () => {
+    const statusEl = document.getElementById('home-status')!;
+    try {
+      await api.putContent('home', {
+        heroLabel: (document.getElementById('edit-heroLabel') as HTMLInputElement).value,
+        heroSub: (document.getElementById('edit-heroSub') as HTMLTextAreaElement).value,
+        aboutParagraphs: [
+          (document.getElementById('edit-aboutP1') as HTMLTextAreaElement).value,
+          (document.getElementById('edit-aboutP2') as HTMLTextAreaElement).value,
+          (document.getElementById('edit-aboutP3') as HTMLTextAreaElement).value,
+        ],
+      });
+      statusEl.textContent = 'Saved.';
+      statusEl.className = 'admin-success';
+      statusEl.style.display = 'block';
+    } catch (err: any) {
+      statusEl.textContent = err.message;
+      statusEl.className = 'admin-error';
+      statusEl.style.display = 'block';
+    }
+  });
+
+  // ── Slot manager (photos + dataviz) ──
+  const slotData: Record<string, (string | null)[]> = {};
+
+  function renderSlots(containerId: string, count: number, pageId: string) {
+    const container = document.getElementById(containerId)!;
+    if (!slotData[pageId]) slotData[pageId] = new Array(count).fill(null);
+    container.innerHTML = '';
+
+    for (let i = 0; i < count; i++) {
+      const slot = document.createElement('div');
+      slot.className = 'admin-slot';
+      const url = slotData[pageId][i];
+
+      slot.innerHTML = `
+        <div class="admin-slot__preview admin-dropzone" data-drop-index="${i}" data-drop-page="${pageId}">
+          ${url
+            ? `<img src="${url}" alt="Slot ${i+1}" />`
+            : `<p>Drop file here</p>`}
+          <input type="file" accept="image/*,video/*" data-file-index="${i}" data-file-page="${pageId}" />
+        </div>
+        <div class="admin-slot__actions">
+          ${url ? `<button class="admin-btn admin-btn--small admin-btn--danger" data-clear-index="${i}" data-clear-page="${pageId}">Remove</button>` : ''}
+        </div>
+      `;
+      container.appendChild(slot);
+    }
+
+    // Drag-and-drop + file input handlers
+    container.querySelectorAll<HTMLDivElement>('.admin-dropzone').forEach(zone => {
+      zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('dragover'); });
+      zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+      zone.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        zone.classList.remove('dragover');
+        const file = e.dataTransfer?.files[0];
+        if (file) await uploadToSlot(file, zone.dataset.dropPage!, parseInt(zone.dataset.dropIndex!), containerId);
+      });
+    });
+
+    container.querySelectorAll<HTMLInputElement>('input[type="file"]').forEach(input => {
+      input.addEventListener('change', async () => {
+        const file = input.files?.[0];
+        if (file) await uploadToSlot(file, input.dataset.filePage!, parseInt(input.dataset.fileIndex!), containerId);
+      });
+    });
+
+    container.querySelectorAll<HTMLButtonElement>('[data-clear-index]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const pg = btn.dataset.clearPage!;
+        slotData[pg][parseInt(btn.dataset.clearIndex!)] = null;
+        renderSlots(containerId, count, pg);
+      });
+    });
+
+    // Load existing data
+    if (!slotData[pageId].some(s => s !== null)) {
+      api.getContent(pageId).then(data => {
+        if (data.content?.slots) {
+          slotData[pageId] = data.content.slots;
+          while (slotData[pageId].length < count) slotData[pageId].push(null);
+          renderSlots(containerId, count, pageId);
+        }
+      }).catch(() => {});
+    }
   }
-</style>
+
+  async function uploadToSlot(file: File, pageId: string, index: number, containerId: string) {
+    try {
+      const prefix = pageId === 'photos' ? 'public/photos' : 'public/dataviz';
+      const { uploadUrl, publicUrl } = await api.getPresignedUrl(file.name, file.type, prefix);
+      await fetch(uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
+      slotData[pageId][index] = publicUrl;
+      const count = pageId === 'photos' ? 3 : 6;
+      renderSlots(containerId, count, pageId);
+    } catch (err: any) {
+      alert('Upload failed: ' + err.message);
+    }
+  }
+
+  // Save slots
+  document.getElementById('save-photos')?.addEventListener('click', async () => {
+    const statusEl = document.getElementById('photos-status')!;
+    try {
+      await api.putContent('photos', { slots: slotData['photos'] || [] });
+      statusEl.textContent = 'Saved.'; statusEl.className = 'admin-success'; statusEl.style.display = 'block';
+    } catch (err: any) {
+      statusEl.textContent = err.message; statusEl.className = 'admin-error'; statusEl.style.display = 'block';
+    }
+  });
+
+  document.getElementById('save-dataviz')?.addEventListener('click', async () => {
+    const statusEl = document.getElementById('dataviz-status')!;
+    try {
+      await api.putContent('dataviz', { slots: slotData['dataviz'] || [] });
+      statusEl.textContent = 'Saved.'; statusEl.className = 'admin-success'; statusEl.style.display = 'block';
+    } catch (err: any) {
+      statusEl.textContent = err.message; statusEl.className = 'admin-error'; statusEl.style.display = 'block';
+    }
+  });
+
+  // ── Messages ──
+  async function loadMessages() {
+    const container = document.getElementById('messages-container')!;
+    try {
+      const data = await api.getMessages();
+      const msgs = data.messages || [];
+      if (msgs.length === 0) {
+        container.innerHTML = '<p style="color:var(--text-muted);font-family:var(--font-mono);font-size:var(--size-sm);">No messages yet.</p>';
+        return;
+      }
+      container.innerHTML = `<table class="admin-messages">
+        <thead><tr><th>Date</th><th>From</th><th>Message</th><th></th></tr></thead>
+        <tbody>${msgs.map((m: any) => `
+          <tr class="${m.status === 'unread' ? 'unread' : ''}" data-msg-id="${m.messageId}">
+            <td>${new Date(m.createdAt).toLocaleDateString()}</td>
+            <td>${m.name}<br/><span style="font-size:var(--size-xs);color:var(--text-muted);">${m.email}</span></td>
+            <td>${m.message.length > 120 ? m.message.slice(0, 120) + '...' : m.message}</td>
+            <td class="admin-messages__actions">
+              <button class="admin-btn admin-btn--small" data-toggle-msg="${m.messageId}" data-msg-status="${m.status}">${m.status === 'unread' ? 'Read' : 'Unread'}</button>
+              <button class="admin-btn admin-btn--small admin-btn--danger" data-delete-msg="${m.messageId}">Del</button>
+            </td>
+          </tr>
+        `).join('')}</tbody>
+      </table>`;
+
+      container.querySelectorAll<HTMLButtonElement>('[data-toggle-msg]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const newStatus = btn.dataset.msgStatus === 'unread' ? 'read' : 'unread';
+          await api.patchMessage(btn.dataset.toggleMsg!, newStatus);
+          loadedSections.delete('messages');
+          await loadMessages();
+        });
+      });
+
+      container.querySelectorAll<HTMLButtonElement>('[data-delete-msg]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('Delete this message?')) return;
+          await api.deleteMessage(btn.dataset.deleteMsg!);
+          loadedSections.delete('messages');
+          await loadMessages();
+        });
+      });
+    } catch (err: any) {
+      container.innerHTML = `<p class="admin-error">${err.message}</p>`;
+    }
+  }
+
+  // ── Init ──
+  showView();
+</script>
+</body>
+</html>
