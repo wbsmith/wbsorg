@@ -98,7 +98,7 @@ import '../../styles/admin.css';
       <div class="admin-section" id="section-photos">
         <h2>Photos</h2>
         <p style="color:var(--text-secondary);margin-bottom:var(--space-xl);">Drag and drop images into the 3 slots below.</p>
-        <div class="admin-slots admin-slots--3" id="photo-slots"></div>
+        <div class="admin-slots admin-slots--6" id="photo-slots"></div>
         <button class="admin-btn" id="save-photos" style="margin-top:var(--space-xl);">Save</button>
         <p id="photos-status" style="display:none;"></p>
       </div>
@@ -216,7 +216,7 @@ import '../../styles/admin.css';
     loadedSections.add(section);
 
     if (section === 'home') await loadHomeEditor();
-    if (section === 'photos') renderSlots('photo-slots', 3, 'photos');
+    if (section === 'photos') renderSlots('photo-slots', 6, 'photos');
     if (section === 'dataviz') renderSlots('dataviz-slots', 6, 'dataviz');
     if (section === 'messages') await loadMessages();
   }
@@ -258,7 +258,7 @@ import '../../styles/admin.css';
   });
 
   // ── Slot manager (photos + dataviz) ──
-  interface SlotItem { url: string; caption: string; }
+  interface SlotItem { url: string; caption: string; description: string; }
   const slotData: Record<string, (SlotItem | null)[]> = {};
   const slotDataLoaded = new Set<string>();
   const showCaptions: Record<string, boolean> = { photos: false, dataviz: true };
@@ -292,6 +292,7 @@ import '../../styles/admin.css';
       const captionField = (url && showCaptions[pageId]) ? `
         <div class="admin-field" style="margin:0;padding:var(--space-sm);">
           <input type="text" placeholder="Caption..." value="${item?.caption || ''}" data-caption-index="${i}" data-caption-page="${pageId}" style="font-size:var(--size-xs);" />
+          <textarea placeholder="Description (shown in fullscreen)..." data-desc-index="${i}" data-desc-page="${pageId}" rows="2" style="font-size:var(--size-xs);margin-top:var(--space-xs);width:100%;background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);padding:var(--space-xs) var(--space-sm);color:var(--text-primary);resize:vertical;">${item?.description || ''}</textarea>
         </div>` : '';
 
       slot.innerHTML = `
@@ -333,6 +334,14 @@ import '../../styles/admin.css';
       });
     });
 
+    container.querySelectorAll<HTMLTextAreaElement>('[data-desc-index]').forEach(ta => {
+      ta.addEventListener('input', () => {
+        const pg = ta.dataset.descPage!;
+        const idx = parseInt(ta.dataset.descIndex!);
+        if (slotData[pg][idx]) slotData[pg][idx]!.description = ta.value;
+      });
+    });
+
     container.querySelectorAll<HTMLButtonElement>('[data-clear-index]').forEach(btn => {
       btn.addEventListener('click', () => {
         const pg = btn.dataset.clearPage!;
@@ -361,8 +370,8 @@ import '../../styles/admin.css';
         if (data.content?.slots) {
           slotData[pageId] = data.content.slots.map((s: any) => {
             if (!s) return null;
-            if (typeof s === 'string') return { url: s, caption: '' };
-            return { url: s.url, caption: s.caption || '' };
+            if (typeof s === 'string') return { url: s, caption: '', description: '' };
+            return { url: s.url, caption: s.caption || '', description: s.description || '' };
           });
           while (slotData[pageId].length < count) slotData[pageId].push(null);
           renderSlots(containerId, count, pageId);
@@ -376,8 +385,8 @@ import '../../styles/admin.css';
       const prefix = pageId === 'photos' ? 'photos' : 'dataviz';
       const { uploadUrl, publicUrl } = await api.getPresignedUrl(file.name, file.type, prefix);
       await fetch(uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
-      slotData[pageId][index] = { url: publicUrl, caption: slotData[pageId][index]?.caption || '' };
-      const count = pageId === 'photos' ? 3 : 6;
+      slotData[pageId][index] = { url: publicUrl, caption: slotData[pageId][index]?.caption || '', description: slotData[pageId][index]?.description || '' };
+      const count = 6;
       renderSlots(containerId, count, pageId);
     } catch (err: any) {
       alert('Upload failed: ' + err.message);

@@ -48,10 +48,13 @@ import Base from '../../layouts/Base.astro';
   function renderSlot(el: Element, slot: any) {
     const url = typeof slot === 'string' ? slot : slot.url;
     const caption = typeof slot === 'string' ? '' : (slot.caption || '');
+    const description = typeof slot === 'string' ? '' : (slot.description || '');
     const type = detectType(url);
     el.classList.add('dataviz__slot--filled');
     el.setAttribute('data-viz-url', url);
     el.setAttribute('data-viz-type', type);
+    if (caption) el.setAttribute('data-viz-caption', caption);
+    if (description) el.setAttribute('data-viz-desc', description);
 
     const captionHtml = caption ? `<div class="dataviz__caption">${caption}</div>` : '';
 
@@ -109,13 +112,29 @@ import Base from '../../layouts/Base.astro';
 
     const url = slot.getAttribute('data-viz-url')!;
     const type = slot.getAttribute('data-viz-type')!;
+    const caption = slot.getAttribute('data-viz-caption') || '';
+    const description = slot.getAttribute('data-viz-desc') || '';
 
+    let media = '';
     if (type === 'html') {
-      modalBody.innerHTML = `<iframe src="${url}" class="dataviz__modal-iframe"></iframe>`;
+      media = `<iframe src="${url}" class="dataviz__modal-iframe"></iframe>`;
     } else if (type === 'video') {
-      modalBody.innerHTML = `<video src="${url}" controls autoplay class="dataviz__modal-media"></video>`;
+      media = `<video src="${url}" controls autoplay class="dataviz__modal-media"></video>`;
     } else {
-      modalBody.innerHTML = `<img src="${url}" alt="" class="dataviz__modal-media" />`;
+      media = `<img src="${url}" alt="" class="dataviz__modal-media" />`;
+    }
+
+    if (description) {
+      modalBody.innerHTML = `
+        <div class="dataviz__modal-split">
+          <div class="dataviz__modal-info">
+            ${caption ? `<h3>${caption}</h3>` : ''}
+            <p>${description}</p>
+          </div>
+          <div class="dataviz__modal-content">${media}</div>
+        </div>`;
+    } else {
+      modalBody.innerHTML = media;
     }
 
     modal.showModal();
@@ -282,5 +301,55 @@ import Base from '../../layouts/Base.astro';
     max-height: 100%;
     object-fit: contain;
     border-radius: var(--radius-md);
+  }
+
+  .dataviz__modal-split {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: var(--space-2xl);
+    width: 100%;
+    height: 100%;
+    align-items: center;
+  }
+
+  @media (max-width: 768px) {
+    .dataviz__modal-split {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto 1fr;
+    }
+  }
+
+  .dataviz__modal-info {
+    color: var(--text-secondary);
+    line-height: 1.7;
+  }
+
+  .dataviz__modal-info h3 {
+    font-size: var(--size-xl);
+    color: var(--text-primary);
+    margin-bottom: var(--space-md);
+  }
+
+  .dataviz__modal-info p {
+    font-size: var(--size-base);
+  }
+
+  .dataviz__modal-content {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .dataviz__modal-content .dataviz__modal-iframe {
+    width: 100%;
+    height: 100%;
+  }
+
+  .dataviz__modal-content .dataviz__modal-media {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
   }
 </style>
