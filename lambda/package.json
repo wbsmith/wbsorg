@@ -12,6 +12,8 @@
   "type": "commonjs",
   "dependencies": {
     "@aws-sdk/client-cognito-identity-provider": "^3.1041.0",
-    "@aws-sdk/s3-request-presigner": "^3.1041.0"
+    "@aws-sdk/s3-request-presigner": "^3.1041.0",
+    "@resvg/resvg-wasm": "^2.6.2",
+    "satori": "^0.26.0"
   }
 }
