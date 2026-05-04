@@ -305,11 +305,11 @@ import Base from '../../layouts/Base.astro';
 
   .dataviz__modal-split {
     display: grid;
-    grid-template-columns: 300px 1fr;
+    grid-template-columns: 280px 1fr;
     gap: var(--space-2xl);
     width: 100%;
     height: 100%;
-    align-items: center;
+    min-height: 0;
   }
 
   @media (max-width: 768px) {
@@ -322,6 +322,8 @@ import Base from '../../layouts/Base.astro';
   .dataviz__modal-info {
     color: var(--text-secondary);
     line-height: 1.7;
+    align-self: center;
+    overflow-y: auto;
   }
 
   .dataviz__modal-info h3 {
@@ -335,16 +337,17 @@ import Base from '../../layouts/Base.astro';
   }
 
   .dataviz__modal-content {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    min-height: 0;
+    min-width: 0;
+    overflow: hidden;
   }
 
   .dataviz__modal-content .dataviz__modal-iframe {
     width: 100%;
     height: 100%;
+    border: none;
+    border-radius: var(--radius-md);
+    background: #fff;
   }
 
   .dataviz__modal-content .dataviz__modal-media {
