@@ -69,6 +69,10 @@ import '../../styles/admin.css';
           <input type="text" id="edit-heroLabel" />
         </div>
         <div class="admin-field">
+          <label for="edit-heroTitle">Hero Title</label>
+          <input type="text" id="edit-heroTitle" />
+        </div>
+        <div class="admin-field">
           <label for="edit-heroSub">Hero Subtitle</label>
           <textarea id="edit-heroSub" rows="3"></textarea>
         </div>
@@ -227,6 +231,7 @@ import '../../styles/admin.css';
       const data = await api.getContent('home');
       const c = data.content;
       (document.getElementById('edit-heroLabel') as HTMLInputElement).value = c.heroLabel || '';
+      (document.getElementById('edit-heroTitle') as HTMLInputElement).value = c.heroTitle || '';
       (document.getElementById('edit-heroSub') as HTMLTextAreaElement).value = c.heroSub || '';
       const paragraphs = c.aboutParagraphs || [];
       (document.getElementById('edit-aboutP1') as HTMLTextAreaElement).value = paragraphs[0] || '';
@@ -240,6 +245,7 @@ import '../../styles/admin.css';
     try {
       await api.putContent('home', {
         heroLabel: (document.getElementById('edit-heroLabel') as HTMLInputElement).value,
+        heroTitle: (document.getElementById('edit-heroTitle') as HTMLInputElement).value,
         heroSub: (document.getElementById('edit-heroSub') as HTMLTextAreaElement).value,
         aboutParagraphs: [
           (document.getElementById('edit-aboutP1') as HTMLTextAreaElement).value,
