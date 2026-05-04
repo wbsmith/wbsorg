@@ -50,6 +50,9 @@ import Base from '../../layouts/Base.astro';
     const caption = typeof slot === 'string' ? '' : (slot.caption || '');
     const description = typeof slot === 'string' ? '' : (slot.description || '');
     const type = detectType(url);
+    const cw = (typeof slot !== 'string' && slot.width) || 1024;
+    const ch = (typeof slot !== 'string' && slot.height) || 768;
+
     el.classList.add('dataviz__slot--filled');
     el.setAttribute('data-viz-url', url);
     el.setAttribute('data-viz-type', type);
@@ -59,9 +62,6 @@ import Base from '../../layouts/Base.astro';
     el.setAttribute('data-viz-h', String(ch));
 
     const captionHtml = caption ? `<div class="dataviz__caption">${caption}</div>` : '';
-
-    const cw = (typeof slot !== 'string' && slot.width) || 1024;
-    const ch = (typeof slot !== 'string' && slot.height) || 768;
 
     if (type === 'html') {
       el.innerHTML = `<iframe src="${url}"></iframe>${captionHtml}`;
