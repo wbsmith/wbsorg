@@ -12,6 +12,10 @@ export async function loadContent(pageId: string) {
       const value = data.content[key];
       if (value === undefined) return;
 
+      const current = (el.textContent || '').replace(/\s+/g, ' ').trim();
+      const incoming = (Array.isArray(value) ? value.join(' ') : value.replace(/\n/g, ' ')).replace(/\s+/g, ' ').trim();
+      if (current === incoming) return;
+
       if (Array.isArray(value)) {
         el.innerHTML = value.map((p: string) => `<p>${p}</p>`).join('');
       } else if (key === 'heroTitle') {
@@ -23,16 +27,5 @@ export async function loadContent(pageId: string) {
         el.textContent = value;
       }
     });
-
-    document.querySelectorAll<HTMLImageElement>('[data-media]').forEach(el => {
-      const key = el.getAttribute('data-media')!;
-      const value = data.content[key];
-      if (value) {
-        el.src = value;
-        el.style.display = '';
-      }
-    });
-  } catch {
-    // static content remains as fallback
-  }
+  } catch {}
 }

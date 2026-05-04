@@ -1,7 +1,26 @@
 ---
 import Base from '../layouts/Base.astro';
 import ContactForm from '../components/ContactForm.astro';
+import { AWS_CONFIG } from '../lib/aws-config';
 
+const defaults = {
+  heroLabel: 'W. Bryan Smith, PhD',
+  heroTitle: 'Data, AI,\nand the science\nbetween.',
+  heroSub: 'Building at the intersection of neuroscience, AI, and the systems that connect them to real decisions.',
+  aboutParagraphs: [] as string[],
+};
+
+let content = defaults;
+try {
+  const res = await fetch(`${AWS_CONFIG.apiUrl}/api/content/home`);
+  if (res.ok) {
+    const data = await res.json();
+    content = { ...defaults, ...data.content };
+  }
+} catch {}
+
+const titleLines = content.heroTitle.split('\n');
+const titleAccent = titleLines.pop() || '';
 ---
 
 <Base title="W. Bryan Smith">
@@ -10,16 +29,12 @@ import ContactForm from '../components/ContactForm.astro';
     <div class="container">
       <div class="hero__grid">
         <div class="hero__text">
-          <p class="hero__label" data-content="heroLabel">W. Bryan Smith, PhD</p>
+          <p class="hero__label" data-content="heroLabel">{content.heroLabel}</p>
           <h1 class="hero__title" data-content="heroTitle">
-            Data, AI,<br />
-            and the science<br />
-            <span class="hero__accent">between.</span>
+            {titleLines.map(line => <>{line}<br /></>)}
+            <span class="hero__accent">{titleAccent}</span>
           </h1>
-          <p class="hero__sub" data-content="heroSub">
-            Building at the intersection of neuroscience, AI,
-            and the systems that connect them to real decisions.
-          </p>
+          <p class="hero__sub" data-content="heroSub">{content.heroSub}</p>
         </div>
         <div class="hero__photo">
           <div class="hero__photo-frame">
@@ -39,29 +54,14 @@ import ContactForm from '../components/ContactForm.astro';
         <hr class="section__divider" />
       </div>
       <div class="about__body" data-content="aboutParagraphs">
-        <p>
-          I'm a multidisciplinary technical leader with a career that started in
-          the wet lab and moved through computational neuroscience, data science,
-          machine learning engineering, and executive leadership. PhD from Caltech
-          in neuroscience, where I studied local protein synthesis in hippocampal
-          neurons. That training — designing experiments, building models from
-          first principles, communicating findings clearly — has shaped everything
-          I've done since.
-        </p>
-        <p>
-          I've held technical and executive roles across biotech, healthcare,
-          gaming, market research, and enterprise retail. Currently Co-Founder
-          and CTO at <a href="https://earthineering.company/" target="_blank" rel="noopener">Earthineering</a>.
-          Previously CDO at Sequoia, led identity, interoperability, and AI for
-          Walmart Health &amp; Wellness, co-founded Myia Labs (an intelligent
-          health monitoring platform), and served as Chief Scientist at PokitDok.
-        </p>
-        <p>
-          I build things outside of work too — four independent web products, each
-          addressing a different problem I cared enough to solve. I also photograph
-          landscapes and cityscapes, mostly around the Bay Area and the Sierra,
-          and I spend a lot of time on trails.
-        </p>
+        {content.aboutParagraphs.length > 0
+          ? content.aboutParagraphs.map(p => <p>{p}</p>)
+          : <>
+              <p>I'm a multidisciplinary technical leader with a career that started in the wet lab and moved through computational neuroscience, data science, machine learning engineering, and executive leadership. PhD from Caltech in neuroscience, where I studied local protein synthesis in hippocampal neurons. That training — designing experiments, building models from first principles, communicating findings clearly — has shaped everything I've done since.</p>
+              <p>I've held technical and executive roles across biotech, healthcare, gaming, market research, and enterprise retail. Currently Co-Founder and CTO at Earthineering. Previously CDO at Sequoia, led identity, interoperability, and AI for Walmart Health & Wellness, co-founded Myia Labs (an intelligent health monitoring platform), and served as Chief Scientist at PokitDok.</p>
+              <p>I build things outside of work too — four independent web products, each addressing a different problem I cared enough to solve. I also photograph landscapes and cityscapes, and I spend a lot of time on trails.</p>
+            </>
+        }
       </div>
     </div>
   </section>
