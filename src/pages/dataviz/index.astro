@@ -124,18 +124,13 @@ import Base from '../../layouts/Base.astro';
       media = `<img src="${url}" alt="" class="dataviz__modal-media" />`;
     }
 
-    if (description) {
-      modalBody.innerHTML = `
-        <div class="dataviz__modal-split">
-          <div class="dataviz__modal-info">
-            ${caption ? `<h3>${caption}</h3>` : ''}
-            <p>${description}</p>
-          </div>
-          <div class="dataviz__modal-content">${media}</div>
-        </div>`;
-    } else {
-      modalBody.innerHTML = media;
-    }
+    const infoHtml = (caption || description) ? `
+      <div class="dataviz__modal-info">
+        ${caption ? `<h3>${caption}</h3>` : ''}
+        ${description ? `<p>${description}</p>` : ''}
+      </div>` : '';
+
+    modalBody.innerHTML = `${infoHtml}<div class="dataviz__modal-content">${media}</div>`;
 
     modal.showModal();
   });
@@ -283,9 +278,9 @@ import Base from '../../layouts/Base.astro';
     width: 100%;
     height: 100%;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: var(--space-3xl);
+    flex-direction: column;
+    padding: var(--space-2xl) var(--space-3xl);
+    min-height: 0;
   }
 
   .dataviz__modal-iframe {
@@ -303,43 +298,31 @@ import Base from '../../layouts/Base.astro';
     border-radius: var(--radius-md);
   }
 
-  .dataviz__modal-split {
-    display: grid;
-    grid-template-columns: 280px 1fr;
-    gap: var(--space-2xl);
-    width: 100%;
-    height: 100%;
-    min-height: 0;
-  }
-
-  @media (max-width: 768px) {
-    .dataviz__modal-split {
-      grid-template-columns: 1fr;
-      grid-template-rows: auto 1fr;
-    }
-  }
-
   .dataviz__modal-info {
     color: var(--text-secondary);
-    line-height: 1.7;
-    align-self: center;
-    overflow-y: auto;
+    line-height: 1.5;
+    padding-bottom: var(--space-md);
+    flex-shrink: 0;
   }
 
   .dataviz__modal-info h3 {
-    font-size: var(--size-xl);
+    font-size: var(--size-lg);
     color: var(--text-primary);
-    margin-bottom: var(--space-md);
+    display: inline;
+    margin-right: var(--space-sm);
   }
 
   .dataviz__modal-info p {
-    font-size: var(--size-base);
+    font-size: var(--size-sm);
+    display: inline;
   }
 
   .dataviz__modal-content {
+    flex: 1;
     min-height: 0;
-    min-width: 0;
-    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .dataviz__modal-content .dataviz__modal-iframe {
@@ -354,5 +337,6 @@ import Base from '../../layouts/Base.astro';
     max-width: 100%;
     max-height: 100%;
     object-fit: contain;
+    border-radius: var(--radius-md);
   }
 </style>
