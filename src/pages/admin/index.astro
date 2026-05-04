@@ -264,7 +264,7 @@ import '../../styles/admin.css';
   });
 
   // ── Slot manager (photos + dataviz) ──
-  interface SlotItem { url: string; caption: string; description: string; }
+  interface SlotItem { url: string; caption: string; description: string; width: number; height: number; }
   const slotData: Record<string, (SlotItem | null)[]> = {};
   const slotDataLoaded = new Set<string>();
   const showCaptions: Record<string, boolean> = { photos: false, dataviz: true };
@@ -282,9 +282,11 @@ import '../../styles/admin.css';
 
       let preview = '';
       let dropContent = '';
+      const iw = item?.width || 1024;
+      const ih = item?.height || 768;
       if (url) {
         if (/\.html?$/i.test(url)) {
-          preview = `<div class="admin-slot__iframe-wrap"><iframe src="${url}"></iframe></div>`;
+          preview = `<div class="admin-slot__iframe-wrap" style="--iframe-w:${iw}px;--iframe-h:${ih}px;"><iframe src="${url}"></iframe></div>`;
         } else if (/\.(mp4|webm|mov)$/i.test(url)) {
           preview = `<video src="${url}" muted loop autoplay playsinline style="width:100%;height:100%;object-fit:contain;"></video>`;
         } else {
@@ -362,7 +364,8 @@ import '../../styles/admin.css';
       if (!iframe) return;
       const doScale = () => {
         const w = wrap.clientWidth;
-        if (w > 0) iframe.style.transform = `scale(${w / 1024})`;
+        const iw = parseInt(wrap.style.getPropertyValue('--iframe-w')) || 1024;
+        if (w > 0) iframe.style.transform = `scale(${w / iw})`;
       };
       iframe.addEventListener('load', doScale);
       setTimeout(doScale, 100);
@@ -376,8 +379,8 @@ import '../../styles/admin.css';
         if (data.content?.slots) {
           slotData[pageId] = data.content.slots.map((s: any) => {
             if (!s) return null;
-            if (typeof s === 'string') return { url: s, caption: '', description: '' };
-            return { url: s.url, caption: s.caption || '', description: s.description || '' };
+            if (typeof s === 'string') return { url: s, caption: '', description: '', width: 0, height: 0 };
+            return { url: s.url, caption: s.caption || '', description: s.description || '', width: s.width || 0, height: s.height || 0 };
           });
           while (slotData[pageId].length < count) slotData[pageId].push(null);
           renderSlots(containerId, count, pageId);
@@ -386,14 +389,55 @@ import '../../styles/admin.css';
     }
   }
 
+  function detectDimensions(file: File): Promise<{ width: number; height: number }> {
+    return new Promise((resolve) => {
+      if (file.type.startsWith('image/')) {
+        const img = new Image();
+        img.onload = () => { resolve({ width: img.naturalWidth, height: img.naturalHeight }); URL.revokeObjectURL(img.src); };
+        img.onerror = () => resolve({ width: 0, height: 0 });
+        img.src = URL.createObjectURL(file);
+      } else if (file.type.startsWith('video/')) {
+        const vid = document.createElement('video');
+        vid.onloadedmetadata = () => { resolve({ width: vid.videoWidth, height: vid.videoHeight }); URL.revokeObjectURL(vid.src); };
+        vid.onerror = () => resolve({ width: 0, height: 0 });
+        vid.src = URL.createObjectURL(file);
+      } else if (file.name.match(/\.html?$/i)) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const text = reader.result as string;
+          const wMatch = text.match(/"width":\s*(\d+(?:\.\d+)?)/);
+          const hMatch = text.match(/"height":\s*(\d+(?:\.\d+)?)/);
+          if (wMatch && hMatch) {
+            resolve({ width: Math.round(parseFloat(wMatch[1])), height: Math.round(parseFloat(hMatch[1])) });
+          } else {
+            resolve({ width: 1024, height: 768 });
+          }
+        };
+        reader.onerror = () => resolve({ width: 1024, height: 768 });
+        reader.readAsText(file);
+      } else {
+        resolve({ width: 0, height: 0 });
+      }
+    });
+  }
+
   async function uploadToSlot(file: File, pageId: string, index: number, containerId: string) {
     try {
       const prefix = pageId === 'photos' ? 'photos' : 'dataviz';
-      const { uploadUrl, publicUrl } = await api.getPresignedUrl(file.name, file.type, prefix);
+      const [{ uploadUrl, publicUrl }, dims] = await Promise.all([
+        api.getPresignedUrl(file.name, file.type, prefix),
+        detectDimensions(file),
+      ]);
       await fetch(uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
-      slotData[pageId][index] = { url: publicUrl, caption: slotData[pageId][index]?.caption || '', description: slotData[pageId][index]?.description || '' };
-      const count = 6;
-      renderSlots(containerId, count, pageId);
+      const prev = slotData[pageId][index];
+      slotData[pageId][index] = {
+        url: publicUrl,
+        caption: prev?.caption || '',
+        description: prev?.description || '',
+        width: dims.width,
+        height: dims.height,
+      };
+      renderSlots(containerId, 6, pageId);
     } catch (err: any) {
       alert('Upload failed: ' + err.message);
     }

@@ -55,12 +55,17 @@ import Base from '../../layouts/Base.astro';
     el.setAttribute('data-viz-type', type);
     if (caption) el.setAttribute('data-viz-caption', caption);
     if (description) el.setAttribute('data-viz-desc', description);
+    el.setAttribute('data-viz-w', String(cw));
+    el.setAttribute('data-viz-h', String(ch));
 
     const captionHtml = caption ? `<div class="dataviz__caption">${caption}</div>` : '';
 
+    const cw = (typeof slot !== 'string' && slot.width) || 1024;
+    const ch = (typeof slot !== 'string' && slot.height) || 768;
+
     if (type === 'html') {
       el.innerHTML = `<iframe src="${url}"></iframe>${captionHtml}`;
-      scaleIframeInSlot(el as HTMLElement);
+      scaleIframeInSlot(el as HTMLElement, cw, ch);
     } else if (type === 'video') {
       el.innerHTML = `<video src="${url}" muted loop autoplay playsinline></video>${captionHtml}`;
     } else {
@@ -68,17 +73,18 @@ import Base from '../../layouts/Base.astro';
     }
   }
 
-  function scaleIframeInSlot(slot: Element) {
+  function scaleIframeInSlot(slot: Element, iw: number, ih: number) {
     const iframe = slot.querySelector('iframe') as HTMLIFrameElement;
     if (!iframe) return;
+    iframe.style.width = `${iw}px`;
+    iframe.style.height = `${ih}px`;
 
     const apply = () => {
       const el = slot as HTMLElement;
       const w = el.clientWidth;
       const h = el.clientHeight;
       if (w > 0 && h > 0) {
-        const scale = Math.min(w / 1024, h / 768);
-        iframe.style.transform = `scale(${scale})`;
+        iframe.style.transform = `scale(${Math.min(w / iw, h / ih)})`;
       }
     };
 
@@ -114,23 +120,31 @@ import Base from '../../layouts/Base.astro';
     const type = slot.getAttribute('data-viz-type')!;
     const caption = slot.getAttribute('data-viz-caption') || '';
     const description = slot.getAttribute('data-viz-desc') || '';
+    const vizW = parseInt(slot.getAttribute('data-viz-w') || '1024');
+    const vizH = parseInt(slot.getAttribute('data-viz-h') || '768');
 
     let media = '';
     if (type === 'html') {
-      media = `<iframe src="${url}" class="dataviz__modal-iframe"></iframe>`;
+      const ar = vizW / vizH;
+      media = `<iframe src="${url}" class="dataviz__modal-iframe" style="aspect-ratio:${ar}; max-height:100%; max-width:100%;"></iframe>`;
     } else if (type === 'video') {
       media = `<video src="${url}" controls autoplay class="dataviz__modal-media"></video>`;
     } else {
       media = `<img src="${url}" alt="" class="dataviz__modal-media" />`;
     }
 
-    const infoHtml = (caption || description) ? `
-      <div class="dataviz__modal-info">
-        ${caption ? `<h3>${caption}</h3>` : ''}
-        ${description ? `<p>${description}</p>` : ''}
-      </div>` : '';
-
-    modalBody.innerHTML = `${infoHtml}<div class="dataviz__modal-content">${media}</div>`;
+    if (caption || description) {
+      modalBody.innerHTML = `
+        <div class="dataviz__modal-split">
+          <div class="dataviz__modal-info">
+            ${caption ? `<h3>${caption}</h3>` : ''}
+            ${description ? `<p>${description}</p>` : ''}
+          </div>
+          <div class="dataviz__modal-content">${media}</div>
+        </div>`;
+    } else {
+      modalBody.innerHTML = `<div class="dataviz__modal-content dataviz__modal-content--full">${media}</div>`;
+    }
 
     modal.showModal();
   });
@@ -278,9 +292,10 @@ import Base from '../../layouts/Base.astro';
     width: 100%;
     height: 100%;
     display: flex;
-    flex-direction: column;
-    padding: var(--space-2xl) var(--space-3xl);
-    min-height: 0;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-3xl);
+    overflow: hidden;
   }
 
   .dataviz__modal-iframe {
@@ -298,34 +313,54 @@ import Base from '../../layouts/Base.astro';
     border-radius: var(--radius-md);
   }
 
+  .dataviz__modal-split {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: var(--space-2xl);
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    min-width: 0;
+  }
+
+  @media (max-width: 768px) {
+    .dataviz__modal-split {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto 1fr;
+    }
+  }
+
   .dataviz__modal-info {
     color: var(--text-secondary);
-    line-height: 1.5;
-    padding-bottom: var(--space-md);
-    flex-shrink: 0;
+    line-height: 1.7;
+    align-self: center;
+    overflow-y: auto;
   }
 
   .dataviz__modal-info h3 {
-    font-size: var(--size-lg);
+    font-size: var(--size-xl);
     color: var(--text-primary);
-    display: inline;
-    margin-right: var(--space-sm);
+    margin-bottom: var(--space-md);
   }
 
   .dataviz__modal-info p {
-    font-size: var(--size-sm);
-    display: inline;
+    font-size: var(--size-base);
   }
 
   .dataviz__modal-content {
-    flex: 1;
     min-height: 0;
+    min-width: 0;
     display: flex;
     align-items: center;
     justify-content: center;
   }
 
-  .dataviz__modal-content .dataviz__modal-iframe {
+  .dataviz__modal-content--full {
+    width: 100%;
+    height: 100%;
+  }
+
+  .dataviz__modal-iframe {
     width: 100%;
     height: 100%;
     border: none;
@@ -333,7 +368,7 @@ import Base from '../../layouts/Base.astro';
     background: #fff;
   }
 
-  .dataviz__modal-content .dataviz__modal-media {
+  .dataviz__modal-media {
     max-width: 100%;
     max-height: 100%;
     object-fit: contain;
