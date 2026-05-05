@@ -153,6 +153,7 @@ const server = createServer(async (req, res) => {
       join(staticBase, path + '.html'),
       join(staticBase, path),
     ];
+    console.log(JSON.stringify({ path, staticBase, try0: tryPaths[0], exists0: existsSync(tryPaths[0]) }));
 
     for (const filePath of tryPaths) {
       if (existsSync(filePath) && statSync(filePath).isFile()) {
