@@ -31,6 +31,7 @@ function renderPost(post) {
   <meta property="og:type" content="article" />
   <meta name="twitter:card" content="summary_large_image" />
   <link rel="icon" href="/favicon.ico" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <title>${post.title} — W. Bryan Smith</title>
@@ -107,6 +108,19 @@ function renderPost(post) {
     <div class="post-body">${post.body}</div>
   </article>
   <footer class="footer">W. Bryan Smith, PhD &middot; &copy; ${new Date().getFullYear()}</footer>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16/dist/contrib/auto-render.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      renderMathInElement(document.querySelector('.post-body'), {
+        delimiters: [
+          {left: '$$', right: '$$', display: true},
+          {left: '$', right: '$', display: false}
+        ],
+        throwOnError: false
+      });
+    });
+  </script>
 </body>
 </html>`;
 }
