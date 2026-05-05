@@ -1,23 +1,17 @@
 import { createServer } from 'node:http';
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, ScanCommand } from '@aws-sdk/lib-dynamodb';
 import { readFileSync, existsSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const client = DynamoDBDocumentClient.from(new DynamoDBClient({ region: 'us-west-1' }));
-
 const PORT = process.env.PORT || 3000;
+const API_URL = 'https://h0bt7p533f.execute-api.us-west-1.amazonaws.com';
 
 async function findPostBySlug(slug) {
-  const result = await client.send(new ScanCommand({
-    TableName: 'wbs-posts',
-    FilterExpression: 'slug = :s AND #st = :pub',
-    ExpressionAttributeNames: { '#st': 'status' },
-    ExpressionAttributeValues: { ':s': slug, ':pub': 'published' },
-  }));
-  return result.Items?.[0] || null;
+  const res = await fetch(`${API_URL}/api/posts`);
+  if (!res.ok) return null;
+  const data = await res.json();
+  return (data.posts || []).find(p => p.slug === slug && p.status === 'published') || null;
 }
 
 function renderPost(post) {

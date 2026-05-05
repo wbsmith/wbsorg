@@ -9,9 +9,5 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
-  "dependencies": {
-    "@aws-sdk/client-dynamodb": "^3.1042.0",
-    "@aws-sdk/lib-dynamodb": "^3.1042.0"
-  }
+  "type": "commonjs"
 }
