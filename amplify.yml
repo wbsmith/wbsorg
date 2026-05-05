@@ -4,6 +4,7 @@ frontend:
     preBuild:
       commands:
         - npm ci
+        - cd compute && npm ci && cd ..
     build:
       commands:
         - bash build.sh
