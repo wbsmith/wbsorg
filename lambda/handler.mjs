@@ -2,6 +2,7 @@ import { handleContent } from './routes/content.mjs';
 import { handleContact } from './routes/contact.mjs';
 import { handleMessages } from './routes/messages.mjs';
 import { handleUpload, handleMedia } from './routes/upload.mjs';
+import { handlePosts } from './routes/posts.mjs';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -27,6 +28,7 @@ export async function handler(event) {
     if (path.startsWith('/api/messages')) return await handleMessages(method, path, event);
     if (path === '/api/upload/presign') return await handleUpload(event);
     if (path.startsWith('/api/media')) return await handleMedia(method, path, event);
+    if (path.startsWith('/api/posts')) return await handlePosts(method, path, event);
     return json(404, { error: 'Not found' });
   } catch (err) {
     console.error('Unhandled error:', err);

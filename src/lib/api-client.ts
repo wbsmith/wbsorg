@@ -31,4 +31,12 @@ export const api = {
     request('/api/upload/presign', { method: 'POST', body: JSON.stringify({ filename, contentType, prefix }) }),
   listMedia: (prefix: string) => request(`/api/media?prefix=${encodeURIComponent(prefix)}`),
   deleteMedia: (key: string) => request('/api/media', { method: 'DELETE', body: JSON.stringify({ key }) }),
+
+  getPosts: () => request('/api/posts'),
+  getPost: (id: string) => request(`/api/posts/${id}`),
+  createPost: (data: { title: string; body: string; excerpt: string; status: string }) =>
+    request('/api/posts', { method: 'POST', body: JSON.stringify(data) }),
+  updatePost: (id: string, data: any) =>
+    request(`/api/posts/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deletePost: (id: string) => request(`/api/posts/${id}`, { method: 'DELETE' }),
 };

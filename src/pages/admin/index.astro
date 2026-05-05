@@ -11,6 +11,8 @@ import '../../styles/admin.css';
   <meta name="robots" content="noindex" />
   <link rel="icon" href="/favicon.ico" />
   <title>Admin — W. Bryan Smith</title>
+  <link href="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.snow.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js"></script>
 </head>
 <body>
 
@@ -116,10 +118,47 @@ import '../../styles/admin.css';
         <p id="dataviz-status" style="display:none;"></p>
       </div>
 
-      <!-- Writing editor -->
+      <!-- Writing / Blog editor -->
       <div class="admin-section" id="section-writing">
         <h2>Writing</h2>
-        <p style="color:var(--text-muted);font-family:var(--font-mono);font-size:var(--size-sm);">Writing editor coming soon.</p>
+
+        <!-- Post list -->
+        <div id="posts-list-view">
+          <button class="admin-btn" id="new-post-btn" style="margin-bottom:var(--space-xl);">New Post</button>
+          <div id="posts-list">
+            <p style="color:var(--text-muted);font-family:var(--font-mono);font-size:var(--size-sm);">Loading...</p>
+          </div>
+        </div>
+
+        <!-- Post editor -->
+        <div id="post-editor-view" style="display:none;">
+          <button class="admin-btn admin-btn--small" id="back-to-posts" style="margin-bottom:var(--space-xl);">&larr; Back to posts</button>
+          <div class="admin-field">
+            <label for="post-title">Title</label>
+            <input type="text" id="post-title" />
+          </div>
+          <div class="admin-field">
+            <label for="post-excerpt">Excerpt (shown in post list)</label>
+            <textarea id="post-excerpt" rows="2"></textarea>
+          </div>
+          <div class="admin-field">
+            <label>Body</label>
+            <div id="post-editor-toolbar"></div>
+            <div id="post-editor" style="min-height:300px;background:var(--bg-surface);color:var(--text-primary);border:1px solid var(--border-subtle);border-top:none;border-radius:0 0 var(--radius-sm) var(--radius-sm);"></div>
+          </div>
+          <div class="admin-field">
+            <label for="post-status">Status</label>
+            <select id="post-status" style="background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);padding:var(--space-sm) var(--space-md);color:var(--text-primary);font-size:var(--size-base);">
+              <option value="draft">Draft</option>
+              <option value="published">Published</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:var(--space-md);align-items:center;">
+            <button class="admin-btn" id="save-post-btn">Save</button>
+            <button class="admin-btn admin-btn--small admin-btn--danger" id="delete-post-btn" style="display:none;">Delete</button>
+            <span id="post-save-status" style="font-family:var(--font-mono);font-size:var(--size-sm);display:none;"></span>
+          </div>
+        </div>
       </div>
 
       <!-- Messages -->
@@ -222,6 +261,7 @@ import '../../styles/admin.css';
     if (section === 'home') await loadHomeEditor();
     if (section === 'photos') renderSlots('photo-slots', 6, 'photos');
     if (section === 'dataviz') renderSlots('dataviz-slots', 6, 'dataviz');
+    if (section === 'writing') await loadPostsList();
     if (section === 'messages') await loadMessages();
   }
 
@@ -510,6 +550,139 @@ import '../../styles/admin.css';
       container.innerHTML = `<p class="admin-error">${err.message}</p>`;
     }
   }
+
+  // ── Blog / Writing ──
+  let quillEditor: any = null;
+  let editingPostId: string | null = null;
+
+  const postsListView = document.getElementById('posts-list-view')!;
+  const postEditorView = document.getElementById('post-editor-view')!;
+  const postsList = document.getElementById('posts-list')!;
+
+  function initQuill() {
+    if (quillEditor) return;
+    quillEditor = new (window as any).Quill('#post-editor', {
+      theme: 'snow',
+      modules: {
+        toolbar: {
+          container: [
+            [{ header: [2, 3, false] }],
+            ['bold', 'italic', 'underline'],
+            [{ color: [] }],
+            [{ align: [] }],
+            [{ list: 'ordered' }, { list: 'bullet' }],
+            ['link', 'image'],
+            ['blockquote', 'code-block'],
+            ['clean'],
+          ],
+          handlers: {
+            image: function() {
+              const url = prompt('Image URL:');
+              if (url) {
+                const range = quillEditor.getSelection();
+                quillEditor.insertEmbed(range?.index || 0, 'image', url);
+              }
+            }
+          }
+        },
+      },
+    });
+  }
+
+  async function loadPostsList() {
+    try {
+      const data = await api.getPosts();
+      const posts = data.posts || [];
+      if (posts.length === 0) {
+        postsList.innerHTML = '<p style="color:var(--text-muted);font-family:var(--font-mono);font-size:var(--size-sm);">No posts yet.</p>';
+        return;
+      }
+      postsList.innerHTML = posts.map((p: any) => `
+        <div class="admin-post-item" style="display:flex;justify-content:space-between;align-items:center;padding:var(--space-md);border-bottom:1px solid var(--border-subtle);cursor:pointer;" data-edit-post="${p.postId}">
+          <div>
+            <strong style="color:var(--text-primary);">${p.title}</strong>
+            <span style="font-family:var(--font-mono);font-size:var(--size-xs);color:var(--text-muted);margin-left:var(--space-sm);">${p.status}</span>
+            <div style="font-size:var(--size-xs);color:var(--text-muted);margin-top:var(--space-xs);">${new Date(p.createdAt).toLocaleDateString()}</div>
+          </div>
+        </div>
+      `).join('');
+
+      postsList.querySelectorAll<HTMLElement>('[data-edit-post]').forEach(el => {
+        el.addEventListener('click', () => openPostEditor(el.dataset.editPost!));
+      });
+    } catch (err: any) {
+      postsList.innerHTML = `<p class="admin-error">${err.message}</p>`;
+    }
+  }
+
+  async function openPostEditor(postId?: string) {
+    initQuill();
+    postsListView.style.display = 'none';
+    postEditorView.style.display = 'block';
+    const deleteBtn = document.getElementById('delete-post-btn')!;
+
+    if (postId) {
+      editingPostId = postId;
+      deleteBtn.style.display = '';
+      const post = await api.getPost(postId);
+      (document.getElementById('post-title') as HTMLInputElement).value = post.title || '';
+      (document.getElementById('post-excerpt') as HTMLTextAreaElement).value = post.excerpt || '';
+      (document.getElementById('post-status') as HTMLSelectElement).value = post.status || 'draft';
+      quillEditor.root.innerHTML = post.body || '';
+    } else {
+      editingPostId = null;
+      deleteBtn.style.display = 'none';
+      (document.getElementById('post-title') as HTMLInputElement).value = '';
+      (document.getElementById('post-excerpt') as HTMLTextAreaElement).value = '';
+      (document.getElementById('post-status') as HTMLSelectElement).value = 'draft';
+      quillEditor.root.innerHTML = '';
+    }
+  }
+
+  document.getElementById('new-post-btn')!.addEventListener('click', () => openPostEditor());
+
+  document.getElementById('back-to-posts')!.addEventListener('click', () => {
+    postEditorView.style.display = 'none';
+    postsListView.style.display = 'block';
+    loadedSections.delete('writing');
+    loadPostsList();
+  });
+
+  document.getElementById('save-post-btn')!.addEventListener('click', async () => {
+    const statusEl = document.getElementById('post-save-status')!;
+    const data = {
+      title: (document.getElementById('post-title') as HTMLInputElement).value,
+      excerpt: (document.getElementById('post-excerpt') as HTMLTextAreaElement).value,
+      body: quillEditor.root.innerHTML,
+      status: (document.getElementById('post-status') as HTMLSelectElement).value,
+    };
+    try {
+      if (editingPostId) {
+        await api.updatePost(editingPostId, data);
+      } else {
+        const post = await api.createPost(data);
+        editingPostId = post.postId;
+        document.getElementById('delete-post-btn')!.style.display = '';
+      }
+      statusEl.textContent = 'Saved.';
+      statusEl.className = 'admin-success';
+      statusEl.style.display = '';
+    } catch (err: any) {
+      statusEl.textContent = err.message;
+      statusEl.className = 'admin-error';
+      statusEl.style.display = '';
+    }
+  });
+
+  document.getElementById('delete-post-btn')!.addEventListener('click', async () => {
+    if (!editingPostId || !confirm('Delete this post?')) return;
+    await api.deletePost(editingPostId);
+    editingPostId = null;
+    postEditorView.style.display = 'none';
+    postsListView.style.display = 'block';
+    loadedSections.delete('writing');
+    await loadPostsList();
+  });
 
   // ── Init ──
   showView();

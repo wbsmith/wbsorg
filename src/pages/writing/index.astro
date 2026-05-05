@@ -55,8 +55,10 @@ const patents = [
       <!-- Blog posts -->
       <div class="writing__section">
         <h2>Blog</h2>
-        <div class="writing__empty">
-          <p>Posts coming soon.</p>
+        <div id="blog-posts">
+          <div class="writing__empty">
+            <p>Loading...</p>
+          </div>
         </div>
       </div>
 
@@ -89,7 +91,37 @@ const patents = [
   </section>
 </Base>
 
-<style>
+<script>
+  import { AWS_CONFIG } from '../../lib/aws-config';
+
+  async function loadBlogPosts() {
+    const container = document.getElementById('blog-posts')!;
+    try {
+      const res = await fetch(`${AWS_CONFIG.apiUrl}/api/posts`);
+      if (!res.ok) throw new Error('Failed to load');
+      const data = await res.json();
+      const published = (data.posts || []).filter((p: any) => p.status === 'published');
+      if (published.length === 0) {
+        container.innerHTML = '<div class="writing__empty"><p>Posts coming soon.</p></div>';
+        return;
+      }
+      container.innerHTML = published.map((p: any) => `
+        <article class="blog-post-preview">
+          <a href="/writing/${p.slug || p.postId}">
+            <h3>${p.title}</h3>
+            ${p.excerpt ? `<p class="blog-post-preview__excerpt">${p.excerpt}</p>` : ''}
+            <span class="blog-post-preview__date">${new Date(p.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+          </a>
+        </article>
+      `).join('');
+    } catch {
+      container.innerHTML = '<div class="writing__empty"><p>Posts coming soon.</p></div>';
+    }
+  }
+  loadBlogPosts();
+</script>
+
+<style is:global>
   .writing__intro {
     font-size: var(--size-lg);
     color: var(--text-secondary);
@@ -151,5 +183,36 @@ const patents = [
     font-size: var(--size-xs);
     color: var(--text-muted);
     margin-top: var(--space-xs);
+  }
+
+  .blog-post-preview {
+    padding: var(--space-lg);
+    border-left: 2px solid var(--border-subtle);
+    margin-bottom: var(--space-lg);
+    transition: border-color 0.3s;
+  }
+
+  .blog-post-preview:hover {
+    border-left-color: var(--cyan);
+  }
+
+  .blog-post-preview a {
+    color: inherit;
+  }
+
+  .blog-post-preview h3 {
+    font-size: var(--size-lg);
+    margin-bottom: var(--space-xs);
+  }
+
+  .blog-post-preview__excerpt {
+    font-size: var(--size-sm);
+    color: var(--text-secondary);
+  }
+
+  .blog-post-preview__date {
+    font-family: var(--font-mono);
+    font-size: var(--size-xs);
+    color: var(--text-muted);
   }
 </style>
