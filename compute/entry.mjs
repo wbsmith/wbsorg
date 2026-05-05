@@ -1,7 +1,7 @@
 import { createServer } from 'node:http';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, ScanCommand } from '@aws-sdk/lib-dynamodb';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -156,7 +156,7 @@ const server = createServer(async (req, res) => {
     ];
 
     for (const filePath of tryPaths) {
-      if (existsSync(filePath)) {
+      if (existsSync(filePath) && statSync(filePath).isFile()) {
         const ext = filePath.split('.').pop();
         const types = {
           html: 'text/html', css: 'text/css', js: 'application/javascript',
