@@ -1,37 +1,25 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, ScanCommand, UpdateCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
+import { REGION, TABLES, json } from '../config.mjs';
 
-const client = DynamoDBDocumentClient.from(new DynamoDBClient({ region: 'us-west-1' }));
-const TABLE = 'wbs-messages';
-
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Content-Type': 'application/json',
-};
-
-function json(statusCode, body) {
-  return { statusCode, headers: CORS_HEADERS, body: JSON.stringify(body) };
-}
+const client = DynamoDBDocumentClient.from(new DynamoDBClient({ region: REGION }));
 
 export async function handleMessages(method, path, event) {
   if (method === 'GET' && path === '/api/messages') {
-    const result = await client.send(new ScanCommand({ TableName: TABLE }));
+    const result = await client.send(new ScanCommand({ TableName: TABLES.messages }));
     const items = (result.Items || []).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     return json(200, { messages: items });
   }
 
-  const parts = path.split('/');
-  const messageId = parts[3];
-
+  const messageId = path.split('/')[3];
   if (!messageId) return json(400, { error: 'messageId required' });
 
   if (method === 'PATCH') {
     const body = JSON.parse(event.body || '{}');
     const item = await findMessage(messageId);
     if (!item) return json(404, { error: 'Message not found' });
-
     await client.send(new UpdateCommand({
-      TableName: TABLE,
+      TableName: TABLES.messages,
       Key: { messageId, createdAt: item.createdAt },
       UpdateExpression: 'SET #s = :status',
       ExpressionAttributeNames: { '#s': 'status' },
@@ -43,9 +31,8 @@ export async function handleMessages(method, path, event) {
   if (method === 'DELETE') {
     const item = await findMessage(messageId);
     if (!item) return json(404, { error: 'Message not found' });
-
     await client.send(new DeleteCommand({
-      TableName: TABLE,
+      TableName: TABLES.messages,
       Key: { messageId, createdAt: item.createdAt },
     }));
     return json(200, { ok: true });
@@ -56,7 +43,7 @@ export async function handleMessages(method, path, event) {
 
 async function findMessage(messageId) {
   const result = await client.send(new ScanCommand({
-    TableName: TABLE,
+    TableName: TABLES.messages,
     FilterExpression: 'messageId = :id',
     ExpressionAttributeValues: { ':id': messageId },
   }));

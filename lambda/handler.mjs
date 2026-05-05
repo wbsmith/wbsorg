@@ -3,16 +3,7 @@ import { handleContact } from './routes/contact.mjs';
 import { handleMessages } from './routes/messages.mjs';
 import { handleUpload, handleMedia } from './routes/upload.mjs';
 import { handlePosts } from './routes/posts.mjs';
-
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
-};
-
-function json(statusCode, body) {
-  return { statusCode, headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }, body: JSON.stringify(body) };
-}
+import { CORS_HEADERS, json } from './config.mjs';
 
 export async function handler(event) {
   if (event.requestContext?.http?.method === 'OPTIONS') {

@@ -164,8 +164,6 @@ const server = createServer(async (req, res) => {
       join(__dirname, 'pages'),
     ];
     let staticBase = candidates.find(d => existsSync(d) && statSync(d).isDirectory()) || candidates[0];
-    console.log(JSON.stringify({ path, staticBase, __dirname }));
-
     const tryPaths = [
       join(staticBase, path, 'index.html'),
       join(staticBase, path + '.html'),

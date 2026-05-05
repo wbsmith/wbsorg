@@ -1,31 +1,21 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand, GetCommand, DeleteCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
 import { randomUUID } from 'node:crypto';
+import { REGION, TABLES, json } from '../config.mjs';
 
-const client = DynamoDBDocumentClient.from(new DynamoDBClient({ region: 'us-west-1' }));
-const TABLE = 'wbs-posts';
-
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Content-Type': 'application/json',
-};
-
-function json(statusCode, body) {
-  return { statusCode, headers: CORS_HEADERS, body: JSON.stringify(body) };
-}
+const client = DynamoDBDocumentClient.from(new DynamoDBClient({ region: REGION }));
 
 export async function handlePosts(method, path, event) {
-  const parts = path.split('/').filter(Boolean);
-  const postId = parts[2];
+  const postId = path.split('/').filter(Boolean)[2];
 
   if (method === 'GET' && !postId) {
-    const result = await client.send(new ScanCommand({ TableName: TABLE }));
+    const result = await client.send(new ScanCommand({ TableName: TABLES.posts }));
     const posts = (result.Items || []).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     return json(200, { posts });
   }
 
   if (method === 'GET' && postId) {
-    const result = await client.send(new GetCommand({ TableName: TABLE, Key: { postId } }));
+    const result = await client.send(new GetCommand({ TableName: TABLES.posts, Key: { postId } }));
     if (!result.Item) return json(404, { error: 'Post not found' });
     return json(200, result.Item);
   }
@@ -42,13 +32,13 @@ export async function handlePosts(method, path, event) {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    await client.send(new PutCommand({ TableName: TABLE, Item: post }));
+    await client.send(new PutCommand({ TableName: TABLES.posts, Item: post }));
     return json(201, post);
   }
 
   if (method === 'PUT' && postId) {
     const body = JSON.parse(event.body || '{}');
-    const existing = await client.send(new GetCommand({ TableName: TABLE, Key: { postId } }));
+    const existing = await client.send(new GetCommand({ TableName: TABLES.posts, Key: { postId } }));
     if (!existing.Item) return json(404, { error: 'Post not found' });
     const post = {
       ...existing.Item,
@@ -59,12 +49,12 @@ export async function handlePosts(method, path, event) {
       status: body.status ?? existing.Item.status,
       updatedAt: new Date().toISOString(),
     };
-    await client.send(new PutCommand({ TableName: TABLE, Item: post }));
+    await client.send(new PutCommand({ TableName: TABLES.posts, Item: post }));
     return json(200, post);
   }
 
   if (method === 'DELETE' && postId) {
-    await client.send(new DeleteCommand({ TableName: TABLE, Key: { postId } }));
+    await client.send(new DeleteCommand({ TableName: TABLES.posts, Key: { postId } }));
     return json(200, { ok: true });
   }
 

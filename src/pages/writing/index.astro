@@ -92,14 +92,12 @@ const patents = [
 </Base>
 
 <script>
-  import { AWS_CONFIG } from '../../lib/aws-config';
+  import { api } from '../../lib/api-client';
 
   async function loadBlogPosts() {
     const container = document.getElementById('blog-posts')!;
     try {
-      const res = await fetch(`${AWS_CONFIG.apiUrl}/api/posts`);
-      if (!res.ok) throw new Error('Failed to load');
-      const data = await res.json();
+      const data = await api.getPosts();
       const published = (data.posts || []).filter((p: any) => p.status === 'published');
       if (published.length === 0) {
         container.innerHTML = '<div class="writing__empty"><p>Posts coming soon.</p></div>';
