@@ -76,10 +76,41 @@ const papers = [
   },
 ];
 
-const patents = [
+const grantedPatents = [
   {
-    title: 'A Multivariate Computational System And Method For Optimal Healthcare Service Pricing',
-    status: 'Granted',
+    number: 'US10102340B2',
+    title: 'System and Method for Dynamic Healthcare Insurance Claims Decision Support',
+    inventors: 'W. Bryan Smith, Theodore Tanner, Colin Alstad, Denise Gosnell, Virginia Harrison',
+    assignee: 'PokitDok / Change Healthcare Holdings',
+    note: 'Granted 2018, active to 2036',
+    url: 'https://patents.google.com/patent/US10102340B2',
+  },
+  {
+    number: 'US10805072B2',
+    title: 'System and Method for Autonomous Dynamic Person Management',
+    inventors: 'W. Bryan Smith, Jared Corduan, Theodore Tanner, Tim Dunlevy',
+    assignee: 'PokitDok / Change Healthcare Holdings',
+    note: 'Granted 2020, active to 2038',
+    url: 'https://patents.google.com/patent/US10805072B2',
+  },
+];
+
+const patentApplications = [
+  {
+    number: 'US20150088535A1',
+    title: 'A Multivariate Computational System and Method for Optimal Healthcare Service Pricing',
+    inventors: 'W. Bryan Smith, Theodore Tanner',
+    assignee: 'PokitDok / Change Healthcare Holdings',
+    note: 'Application, 2014',
+    url: 'https://patents.google.com/patent/US20150088535A1',
+  },
+  {
+    number: 'US20120030696A1',
+    title: 'Spatially Constrained Biosensory Measurements Used to Decode Specific Physiological States and User Responses Induced by Marketing Media and Interactive Experiences',
+    inventors: 'W. Bryan Smith (sole inventor)',
+    assignee: 'EmSense / Nielsen',
+    note: 'Application, 2011',
+    url: 'https://patents.google.com/patent/US20120030696A1',
   },
 ];
 ---
@@ -128,12 +159,26 @@ const patents = [
 
       <!-- Patents -->
       <div class="writing__section">
-        <h2>Patents</h2>
+        <h2>Granted Patents</h2>
         <ul class="pub-list">
-          {patents.map(patent => (
+          {grantedPatents.map(p => (
             <li class="pub-item">
-              <span class="pub-item__title">{patent.title}</span>
-              <span class="pub-item__venue">{patent.status}</span>
+              <a href={p.url} target="_blank" rel="noopener" class="pub-item__title">{p.number} — {p.title}</a>
+              <span class="pub-item__authors">{p.inventors}</span>
+              <span class="pub-item__venue">{p.assignee} · {p.note}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div class="writing__section">
+        <h2>Patent Applications</h2>
+        <ul class="pub-list">
+          {patentApplications.map(p => (
+            <li class="pub-item">
+              <a href={p.url} target="_blank" rel="noopener" class="pub-item__title">{p.number} — {p.title}</a>
+              <span class="pub-item__authors">{p.inventors}</span>
+              <span class="pub-item__venue">{p.assignee} · {p.note}</span>
             </li>
           ))}
         </ul>
