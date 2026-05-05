@@ -6,9 +6,9 @@ frontend:
         - npm ci
     build:
       commands:
-        - npm run build
+        - bash build.sh
   artifacts:
-    baseDirectory: dist
+    baseDirectory: .amplify-hosting
     files:
       - '**/*'
   cache:

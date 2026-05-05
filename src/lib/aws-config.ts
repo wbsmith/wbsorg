@@ -6,5 +6,5 @@ export const AWS_CONFIG = {
   },
   apiUrl: 'https://h0bt7p533f.execute-api.us-west-1.amazonaws.com',
   mediaBucket: 'wbs-media-assets',
-  mediaBucketUrl: 'https://wbs-media-assets.s3.us-west-1.amazonaws.com',
+  mediaBucketUrl: 'https://d2h03njd9pao3h.cloudfront.net',
 };
