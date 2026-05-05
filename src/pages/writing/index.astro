@@ -4,29 +4,75 @@ import Base from '../../layouts/Base.astro';
 
 const papers = [
   {
-    title: 'Dopaminergic stimulation of local protein synthesis enhances surface expression of GluR1 and synaptic transmission in hippocampal neurons',
+    title: 'Dynamic visualization of local protein synthesis in hippocampal neurons',
+    authors: 'G Aakalu, WB Smith, N Nguyen, C Jiang, EM Schuman',
     venue: 'Neuron',
-    type: 'peer-reviewed',
+    year: 2001,
+    cited: 788,
+    url: 'https://scholar.google.com/citations?view_op=view_citation&hl=en&user=xvmLs6cAAAAJ&citation_for_view=xvmLs6cAAAAJ:u5HHmVD_uO8C',
+  },
+  {
+    title: 'Dopaminergic stimulation of local protein synthesis enhances surface expression of GluR1 and synaptic transmission in hippocampal neurons',
+    authors: 'WB Smith, SR Starck, RW Roberts, EM Schuman',
+    venue: 'Neuron',
+    year: 2005,
+    cited: 340,
+    url: 'https://scholar.google.com/citations?view_op=view_citation&hl=en&user=xvmLs6cAAAAJ&citation_for_view=xvmLs6cAAAAJ:u-x6o8ySG0sC',
   },
   {
     title: 'A role for endothelial NO synthase in LTP revealed by adenovirus-mediated inhibition and rescue',
-    venue: 'Neuroscience',
-    type: 'peer-reviewed',
-  },
-  {
-    title: 'Dynamic visualization of local protein synthesis in hippocampal neurons',
-    venue: 'Neuron',
-    type: 'peer-reviewed',
-  },
-  {
-    title: 'Activation-dependent changes in receptor distribution and dendritic morphology in hippocampal neurons expressing P2X2-green fluorescent protein receptors',
-    venue: 'Journal of Neuroscience',
-    type: 'peer-reviewed',
+    authors: 'DB Kantor, M Lanzrein, SJ Stary, GM Sandoval, WB Smith, BM Sullivan, et al.',
+    venue: 'Science',
+    year: 1996,
+    cited: 214,
+    url: 'https://scholar.google.com/citations?view_op=view_citation&hl=en&user=xvmLs6cAAAAJ&citation_for_view=xvmLs6cAAAAJ:d1gkVwhDpl0C',
   },
   {
     title: 'Golgi twins in late mitosis revealed by genetically encoded tags for live cell imaging and correlated electron microscopy',
-    venue: 'PNAS',
-    type: 'peer-reviewed',
+    authors: 'GM Gaietta, BNG Giepmans, TJ Deerinck, WB Smith, L Ngan, J Llopis, et al.',
+    venue: 'Proceedings of the National Academy of Sciences',
+    year: 2006,
+    cited: 183,
+    url: 'https://scholar.google.com/citations?view_op=view_citation&hl=en&user=xvmLs6cAAAAJ&citation_for_view=xvmLs6cAAAAJ:9yKSN-GCB0IC',
+  },
+  {
+    title: 'Stable in vivo imaging of densely populated glia, axons and blood vessels in the mouse spinal cord using two-photon microscopy',
+    authors: 'D Davalos, JK Lee, WB Smith, B Brinkman, MH Ellisman, B Zheng, et al.',
+    venue: 'Journal of Neuroscience Methods',
+    year: 2008,
+    cited: 173,
+    url: 'https://scholar.google.com/citations?view_op=view_citation&hl=en&user=xvmLs6cAAAAJ&citation_for_view=xvmLs6cAAAAJ:2osOgNQ5qMEC',
+  },
+  {
+    title: 'Activation-dependent changes in receptor distribution and dendritic morphology in hippocampal neurons expressing P2X2-green fluorescent protein receptors',
+    authors: 'BS Khakh, WB Smith, CS Chiu, D Ju, N Davidson, HA Lester',
+    venue: 'Proceedings of the National Academy of Sciences',
+    year: 2001,
+    cited: 90,
+    url: 'https://scholar.google.com/citations?view_op=view_citation&hl=en&user=xvmLs6cAAAAJ&citation_for_view=xvmLs6cAAAAJ:qjMakFHDy7sC',
+  },
+  {
+    title: 'Measuring dendritic distribution of membrane proteins',
+    authors: 'EW Ballou, WB Smith, R Anelli, CJ Heckman',
+    venue: 'Journal of Neuroscience Methods',
+    year: 2006,
+    cited: 42,
+    url: 'https://scholar.google.com/citations?view_op=view_citation&hl=en&user=xvmLs6cAAAAJ&citation_for_view=xvmLs6cAAAAJ:UeHWp8X0CEIC',
+  },
+  {
+    title: 'Local protein synthesis in neurons',
+    authors: 'WB Smith, G Aakalu, EM Schuman',
+    venue: 'Current Biology',
+    year: 2001,
+    cited: 25,
+    url: 'https://scholar.google.com/citations?view_op=view_citation&hl=en&user=xvmLs6cAAAAJ&citation_for_view=xvmLs6cAAAAJ:IjCSPb-OGe4C',
+  },
+  {
+    title: 'Control of synaptic function by local protein synthesis and degradation',
+    authors: 'WB Smith, B Bingol, GN Patrick, EM Schuman',
+    venue: 'Cold Spring Harbor Monograph Series',
+    year: 2004,
+    url: 'https://scholar.google.com/citations?view_op=view_citation&hl=en&user=xvmLs6cAAAAJ&citation_for_view=xvmLs6cAAAAJ:ufrVoPGSRksC',
   },
 ];
 
@@ -65,11 +111,16 @@ const patents = [
       <!-- Publications -->
       <div class="writing__section">
         <h2>Peer-Reviewed Publications</h2>
+        <p style="margin-bottom:var(--space-xl);"><a href="https://scholar.google.com/citations?user=xvmLs6cAAAAJ&hl=en" target="_blank" rel="noopener">View on Google Scholar</a></p>
         <ul class="pub-list">
           {papers.map(paper => (
             <li class="pub-item">
-              <span class="pub-item__title">{paper.title}</span>
-              <span class="pub-item__venue">{paper.venue}</span>
+              <a href={paper.url} target="_blank" rel="noopener" class="pub-item__title">{paper.title}</a>
+              <span class="pub-item__authors">{paper.authors}</span>
+              <span class="pub-item__venue">
+                {paper.venue}, {paper.year}
+                {paper.cited ? ` · Cited by ${paper.cited}` : ''}
+              </span>
             </li>
           ))}
         </ul>
@@ -173,6 +224,17 @@ const patents = [
     color: var(--text-primary);
     font-size: var(--size-base);
     line-height: 1.5;
+  }
+
+  .pub-item__title:hover {
+    color: var(--cyan);
+  }
+
+  .pub-item__authors {
+    display: block;
+    font-size: var(--size-sm);
+    color: var(--text-secondary);
+    margin-top: var(--space-xs);
   }
 
   .pub-item__venue {
