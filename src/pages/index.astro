@@ -8,6 +8,8 @@ const defaults = {
   heroTitle: 'Data, AI,\nand the science\nbetween.',
   heroSub: 'Building at the intersection of neuroscience, AI, and the systems that connect them to real decisions.',
   aboutParagraphs: [] as string[],
+  roles: [] as any[],
+  expertise: [] as any[],
 };
 
 let content = defaults;
@@ -21,6 +23,22 @@ try {
 
 const titleLines = content.heroTitle.split('\n');
 const titleAccent = titleLines.pop() || '';
+
+const defaultRoles = [
+  { date: '2025 – Present', role: 'Co-Founder & CTO', org: 'Earthineering', desc: 'Building at the intersection of AI, earth sciences, and engineering.', accent: 'cyan' },
+  { date: '2022 – 2025', role: 'Group Director, Infrastructure & AI', org: 'Walmart Global Tech', desc: 'Led identity, interoperability, information management, and AI for Health & Wellness.', accent: 'magenta' },
+  { date: '2017 – 2022', role: 'Co-Founder & CTO', org: 'Myia Labs', desc: 'Built an intelligent health platform for monitoring and engaging patients with chronic conditions.', accent: 'amber' },
+  { date: '2012 – 2018', role: 'Chief Scientist', org: 'PokitDok', desc: 'Healthcare transaction platform — consumer marketplace, claims, provider networks, pricing intelligence.', accent: 'coral' },
+  { date: '1998 – 2004', role: 'PhD, Neuroscience', org: 'California Institute of Technology', desc: 'Molecular and cellular neurobiology. Local control of synaptic strength via dendritic protein synthesis.', accent: 'blue' },
+];
+const roles = content.roles?.length ? content.roles : defaultRoles;
+
+const defaultExpertise = [
+  { title: 'AI & Machine Learning', desc: 'Statistical modeling, NLP, computer vision, recommendation systems, predictive analytics. From Bayesian networks to transformer architectures.', tags: ['Python', 'PyTorch', 'Scikit-learn', 'NLP', 'Computer Vision'], accent: 'cyan' },
+  { title: 'Data & Infrastructure', desc: 'End-to-end data strategy — pipelines, warehousing, governance, APIs, integrations. Building data organizations from the ground up.', tags: ['AWS', 'Spark', 'SQL', 'Kafka', 'Airflow'], accent: 'magenta' },
+  { title: 'Visualization & Communication', desc: 'Interactive data visualization, scientific communication, translating complex technical work for executives and stakeholders.', tags: ['D3.js', 'Observable', 'Gephi', 'R', 'Julia'], accent: 'amber' },
+];
+const expertise = content.expertise?.length ? content.expertise : defaultExpertise;
 ---
 
 <Base title="W. Bryan Smith">
@@ -74,52 +92,18 @@ const titleAccent = titleLines.pop() || '';
         <h2 class="section__title">Selected roles</h2>
         <hr class="section__divider" />
       </div>
-      <div class="timeline">
-        <div class="timeline__item">
-          <div class="timeline__marker" style="--accent: var(--cyan);"></div>
-          <div class="timeline__content">
-            <span class="timeline__date">2025 &ndash; Present</span>
-            <h3 class="timeline__role">Co-Founder &amp; CTO</h3>
-            <span class="timeline__org">Earthineering</span>
-            <p>Building at the intersection of AI, earth sciences, and engineering.</p>
+      <div class="timeline" id="roles-container">
+        {roles.map((r: any, i: number) => (
+          <div class="timeline__item">
+            <div class="timeline__marker" style={`--accent: var(--${r.accent || 'cyan'});`}></div>
+            <div class="timeline__content">
+              <span class="timeline__date">{r.date}</span>
+              <h3 class="timeline__role">{r.role}</h3>
+              <span class="timeline__org">{r.org}</span>
+              <p>{r.desc}</p>
+            </div>
           </div>
-        </div>
-        <div class="timeline__item">
-          <div class="timeline__marker" style="--accent: var(--magenta);"></div>
-          <div class="timeline__content">
-            <span class="timeline__date">2022 &ndash; 2025</span>
-            <h3 class="timeline__role">Group Director, Infrastructure &amp; AI</h3>
-            <span class="timeline__org">Walmart Global Tech</span>
-            <p>Led identity, interoperability, information management, and AI for Health &amp; Wellness.</p>
-          </div>
-        </div>
-        <div class="timeline__item">
-          <div class="timeline__marker" style="--accent: var(--amber);"></div>
-          <div class="timeline__content">
-            <span class="timeline__date">2017 &ndash; 2022</span>
-            <h3 class="timeline__role">Co-Founder &amp; CTO</h3>
-            <span class="timeline__org">Myia Labs</span>
-            <p>Built an intelligent health platform for monitoring and engaging patients with chronic conditions.</p>
-          </div>
-        </div>
-        <div class="timeline__item">
-          <div class="timeline__marker" style="--accent: var(--coral);"></div>
-          <div class="timeline__content">
-            <span class="timeline__date">2012 &ndash; 2018</span>
-            <h3 class="timeline__role">Chief Scientist</h3>
-            <span class="timeline__org">PokitDok</span>
-            <p>Healthcare transaction platform — consumer marketplace, claims, provider networks, pricing intelligence.</p>
-          </div>
-        </div>
-        <div class="timeline__item">
-          <div class="timeline__marker" style="--accent: var(--blue);"></div>
-          <div class="timeline__content">
-            <span class="timeline__date">1998 &ndash; 2004</span>
-            <h3 class="timeline__role">PhD, Neuroscience</h3>
-            <span class="timeline__org">California Institute of Technology</span>
-            <p>Molecular and cellular neurobiology. Local control of synaptic strength via dendritic protein synthesis.</p>
-          </div>
-        </div>
+        ))}
       </div>
     </div>
   </section>
@@ -132,49 +116,16 @@ const titleAccent = titleLines.pop() || '';
         <h2 class="section__title">What I work with</h2>
         <hr class="section__divider" />
       </div>
-      <div class="grid grid--3">
-        <div class="card card--accent-cyan">
-          <h4>AI &amp; Machine Learning</h4>
-          <p>
-            Statistical modeling, NLP, computer vision, recommendation systems,
-            predictive analytics. From Bayesian networks to transformer architectures.
-          </p>
-          <div class="tag-group">
-            <span class="tag">Python</span>
-            <span class="tag">PyTorch</span>
-            <span class="tag">Scikit-learn</span>
-            <span class="tag">NLP</span>
-            <span class="tag">Computer Vision</span>
+      <div class="grid grid--3" id="expertise-container">
+        {expertise.map((e: any) => (
+          <div class={`card card--accent-${e.accent || 'cyan'}`}>
+            <h4>{e.title}</h4>
+            <p>{e.desc}</p>
+            <div class="tag-group">
+              {(e.tags || []).map((t: string) => <span class="tag">{t}</span>)}
+            </div>
           </div>
-        </div>
-        <div class="card card--accent-magenta">
-          <h4>Data &amp; Infrastructure</h4>
-          <p>
-            End-to-end data strategy — pipelines, warehousing, governance, APIs,
-            integrations. Building data organizations from the ground up.
-          </p>
-          <div class="tag-group">
-            <span class="tag">AWS</span>
-            <span class="tag">Spark</span>
-            <span class="tag">SQL</span>
-            <span class="tag">Kafka</span>
-            <span class="tag">Airflow</span>
-          </div>
-        </div>
-        <div class="card card--accent-amber">
-          <h4>Visualization &amp; Communication</h4>
-          <p>
-            Interactive data visualization, scientific communication, translating
-            complex technical work for executives and stakeholders.
-          </p>
-          <div class="tag-group">
-            <span class="tag">D3.js</span>
-            <span class="tag">Observable</span>
-            <span class="tag">Gephi</span>
-            <span class="tag">R</span>
-            <span class="tag">Julia</span>
-          </div>
-        </div>
+        ))}
       </div>
     </div>
   </section>
@@ -209,6 +160,53 @@ const titleAccent = titleLines.pop() || '';
 
   <ContactForm />
 </Base>
+
+<script>
+  import { api } from '../lib/api-client';
+
+  async function refreshHome() {
+    try {
+      const data = await api.getContent('home');
+      const c = data.content;
+      if (!c) return;
+
+      // Roles
+      if (c.roles?.length) {
+        const container = document.getElementById('roles-container');
+        if (container) {
+          container.innerHTML = c.roles.map((r: any) => `
+            <div class="timeline__item">
+              <div class="timeline__marker" style="--accent: var(--${r.accent || 'cyan'});"></div>
+              <div class="timeline__content">
+                <span class="timeline__date">${r.date}</span>
+                <h3 class="timeline__role">${r.role}</h3>
+                <span class="timeline__org">${r.org}</span>
+                <p>${r.desc}</p>
+              </div>
+            </div>
+          `).join('');
+        }
+      }
+
+      // Expertise
+      if (c.expertise?.length) {
+        const container = document.getElementById('expertise-container');
+        if (container) {
+          container.innerHTML = c.expertise.map((e: any) => `
+            <div class="card card--accent-${e.accent || 'cyan'}">
+              <h4>${e.title}</h4>
+              <p>${e.desc}</p>
+              <div class="tag-group">
+                ${(e.tags || []).map((t: string) => `<span class="tag">${t}</span>`).join('')}
+              </div>
+            </div>
+          `).join('');
+        }
+      }
+    } catch {}
+  }
+  refreshHome();
+</script>
 
 <style is:global>
   .hero {

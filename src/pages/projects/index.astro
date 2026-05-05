@@ -1,37 +1,29 @@
 ---
 import Base from '../../layouts/Base.astro';
+import { AWS_CONFIG } from '../../lib/aws-config';
 
-
-const projects = [
-  {
-    name: 'Userdata.io',
-    url: 'https://userdata.io',
-    accent: 'cyan',
-    description: 'Identity infrastructure for individuals and enterprises. Discover which data breaches you\'ve been exposed to, import your data from platforms like Google and Meta, and control what\'s shared. Enterprise APIs for consent orchestration and identity verification.',
-    tags: ['Privacy', 'Identity', 'APIs', 'Data Rights'],
-  },
-  {
-    name: 'NewsReal.ai',
-    url: 'https://newsreal.ai',
-    accent: 'magenta',
-    description: 'AI-powered news aggregation and analysis. Curates and comments on stories from major sources across politics, technology, finance, world events, and science. Transparent about its nature — labeled as AI-generated analysis, not journalism.',
-    tags: ['AI', 'NLP', 'News', 'Analysis'],
-  },
-  {
-    name: 'Picgraf',
-    url: 'https://picgraf.com',
-    accent: 'amber',
-    description: 'A web-based photo gallery for my photography work. Landscapes, macro, and abstract photography, often inspired by my home state of California.',
-    tags: ['Photography', 'Gallery', 'Web'],
-  },
-  {
-    name: 'World in Wonder',
-    url: 'https://worldinwonder.com',
-    accent: 'coral',
-    description: 'Nature-based programs for young explorers in Marin County. Outdoor day camps, single-day adventures, and nature education experiences for school groups — hands-on learning in natural settings.',
-    tags: ['Education', 'Nature', 'Youth Programs'],
-  },
+const defaultProjects = [
+  { name: 'Userdata.io', url: 'https://userdata.io', accent: 'cyan', description: 'Identity infrastructure for individuals and enterprises.', tags: ['Privacy', 'Identity', 'APIs', 'Data Rights'] },
+  { name: 'NewsReal.ai', url: 'https://newsreal.ai', accent: 'magenta', description: 'AI-powered news aggregation and analysis.', tags: ['AI', 'NLP', 'News', 'Analysis'] },
+  { name: 'Picgraf', url: 'https://picgraf.com', accent: 'amber', description: 'A web-based photo gallery for my photography work.', tags: ['Photography', 'Gallery', 'Web'] },
+  { name: 'World in Wonder', url: 'https://worldinwonder.com', accent: 'coral', description: 'Nature-based programs for young explorers.', tags: ['Education', 'Nature', 'Youth Programs'] },
 ];
+
+let pageTitle = "Things I've built";
+let pageSubtitle = "Independent products I've created outside of my day job, each addressing a problem I wanted solved.";
+let projects = defaultProjects;
+
+try {
+  const res = await fetch(`${AWS_CONFIG.apiUrl}/api/content/projects`);
+  if (res.ok) {
+    const data = await res.json();
+    if (data.content) {
+      pageTitle = data.content.title || pageTitle;
+      pageSubtitle = data.content.subtitle || pageSubtitle;
+      if (data.content.projects?.length) projects = data.content.projects;
+    }
+  }
+} catch {}
 ---
 
 <Base title="Projects — W. Bryan Smith">
@@ -39,14 +31,11 @@ const projects = [
     <div class="container">
       <div class="section__header">
         <span class="section__label">Projects</span>
-        <h1 class="section__title">Things I've built</h1>
-        <p class="projects__intro">
-          Independent products I've created outside of my day job, each addressing
-          a problem I wanted solved.
-        </p>
+        <h1 class="section__title">{pageTitle}</h1>
+        <p class="projects__intro">{pageSubtitle}</p>
         <hr class="section__divider" />
       </div>
-      <div class="projects__grid">
+      <div class="projects__grid" id="projects-grid">
         {projects.map(project => (
           <a href={project.url} target="_blank" rel="noopener" class="project-card">
             <div class={`project-card__accent project-card__accent--${project.accent}`}></div>
@@ -68,6 +57,36 @@ const projects = [
     </div>
   </section>
 </Base>
+
+<script>
+  import { api } from '../../lib/api-client';
+
+  async function refreshProjects() {
+    try {
+      const data = await api.getContent('projects');
+      const c = data.content;
+      if (!c?.projects?.length) return;
+
+      const grid = document.getElementById('projects-grid');
+      if (grid) {
+        grid.innerHTML = c.projects.map((p: any) => `
+          <a href="${p.url}" target="_blank" rel="noopener" class="project-card">
+            <div class="project-card__accent project-card__accent--${p.accent || 'cyan'}"></div>
+            <div class="project-card__body">
+              <h2 class="project-card__name">${p.name}</h2>
+              <p class="project-card__desc">${p.description}</p>
+              <div class="project-card__tags">
+                ${(Array.isArray(p.tags) ? p.tags : []).map((t: string) => `<span class="tag">${t}</span>`).join('')}
+              </div>
+              <span class="project-card__link">${p.url.replace('https://', '')} &rarr;</span>
+            </div>
+          </a>
+        `).join('');
+      }
+    } catch {}
+  }
+  refreshProjects();
+</script>
 
 <style is:global>
   .projects__intro {

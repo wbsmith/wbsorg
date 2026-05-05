@@ -90,14 +90,29 @@ import '../../styles/admin.css';
           <label for="edit-aboutP3">About — Paragraph 3</label>
           <textarea id="edit-aboutP3" rows="5"></textarea>
         </div>
-        <button class="admin-btn" id="save-home">Save</button>
-        <p id="home-status" style="display:none;"></p>
+        <h3 style="margin-top:var(--space-2xl);margin-bottom:var(--space-lg);padding-top:var(--space-xl);border-top:1px solid var(--border-subtle);">Career Roles</h3>
+        <div id="roles-editor"></div>
+        <button class="admin-btn admin-btn--small" id="add-role" style="margin-top:var(--space-md);">+ Add Role</button>
+
+        <h3 style="margin-top:var(--space-2xl);margin-bottom:var(--space-lg);padding-top:var(--space-xl);border-top:1px solid var(--border-subtle);">Expertise Cards</h3>
+        <div id="expertise-editor"></div>
+        <button class="admin-btn admin-btn--small" id="add-expertise" style="margin-top:var(--space-md);">+ Add Card</button>
+
+        <div style="margin-top:var(--space-2xl);">
+          <button class="admin-btn" id="save-home">Save</button>
+          <p id="home-status" style="display:none;"></p>
+        </div>
       </div>
 
       <!-- Projects editor -->
       <div class="admin-section" id="section-projects">
         <h2>Projects</h2>
-        <p style="color:var(--text-muted);font-family:var(--font-mono);font-size:var(--size-sm);">Project editing coming soon.</p>
+        <div id="projects-editor"></div>
+        <div style="display:flex;gap:var(--space-md);margin-top:var(--space-xl);">
+          <button class="admin-btn" id="save-projects">Save</button>
+          <button class="admin-btn admin-btn--small" id="add-project">+ Add Project</button>
+        </div>
+        <p id="projects-status" style="display:none;"></p>
       </div>
 
       <!-- Photos manager -->
@@ -259,6 +274,7 @@ import '../../styles/admin.css';
     loadedSections.add(section);
 
     if (section === 'home') await loadHomeEditor();
+    if (section === 'projects') await loadProjectsEditor();
     if (section === 'photos') renderSlots('photo-slots', 6, 'photos');
     if (section === 'dataviz') renderSlots('dataviz-slots', 6, 'dataviz');
     if (section === 'writing') await loadPostsList();
@@ -266,6 +282,55 @@ import '../../styles/admin.css';
   }
 
   // ── Home editor ──
+  let homeRoles: any[] = [];
+  let homeExpertise: any[] = [];
+
+  function renderListEditor(containerId: string, items: any[], fields: {key: string, label: string, type?: string}[], onUpdate: (items: any[]) => void) {
+    const container = document.getElementById(containerId)!;
+    container.innerHTML = items.map((item, i) => `
+      <div style="border:1px solid var(--border-subtle);border-radius:var(--radius-md);padding:var(--space-md);margin-bottom:var(--space-md);">
+        ${fields.map(f => `
+          <div class="admin-field" style="margin-bottom:var(--space-sm);">
+            <label>${f.label}</label>
+            ${f.type === 'textarea'
+              ? `<textarea data-list-field="${f.key}" data-list-index="${i}" rows="2">${item[f.key] || ''}</textarea>`
+              : `<input type="text" data-list-field="${f.key}" data-list-index="${i}" value="${(item[f.key] || '').replace(/"/g, '&quot;')}" />`}
+          </div>
+        `).join('')}
+        <button class="admin-btn admin-btn--small admin-btn--danger" data-list-remove="${i}">Remove</button>
+      </div>
+    `).join('');
+
+    container.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('[data-list-field]').forEach(el => {
+      el.addEventListener('input', () => {
+        items[parseInt(el.dataset.listIndex!)][el.dataset.listField!] = el.value;
+        onUpdate(items);
+      });
+    });
+    container.querySelectorAll<HTMLButtonElement>('[data-list-remove]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        items.splice(parseInt(btn.dataset.listRemove!), 1);
+        onUpdate(items);
+        renderListEditor(containerId, items, fields, onUpdate);
+      });
+    });
+  }
+
+  const roleFields = [
+    { key: 'date', label: 'Date Range' },
+    { key: 'role', label: 'Role Title' },
+    { key: 'org', label: 'Organization' },
+    { key: 'desc', label: 'Description', type: 'textarea' as const },
+    { key: 'accent', label: 'Accent Color (cyan/magenta/amber/coral/blue)' },
+  ];
+
+  const expertiseFields = [
+    { key: 'title', label: 'Title' },
+    { key: 'desc', label: 'Description', type: 'textarea' as const },
+    { key: 'tags', label: 'Tags (comma-separated)' },
+    { key: 'accent', label: 'Accent Color (cyan/magenta/amber)' },
+  ];
+
   async function loadHomeEditor() {
     try {
       const data = await api.getContent('home');
@@ -277,8 +342,27 @@ import '../../styles/admin.css';
       (document.getElementById('edit-aboutP1') as HTMLTextAreaElement).value = paragraphs[0] || '';
       (document.getElementById('edit-aboutP2') as HTMLTextAreaElement).value = paragraphs[1] || '';
       (document.getElementById('edit-aboutP3') as HTMLTextAreaElement).value = paragraphs[2] || '';
-    } catch { /* use empty fields */ }
+
+      homeRoles = (c.roles || []).map((r: any) => ({...r}));
+      homeExpertise = (c.expertise || []).map((e: any) => ({
+        ...e,
+        tags: Array.isArray(e.tags) ? e.tags.join(', ') : e.tags || '',
+      }));
+
+      renderListEditor('roles-editor', homeRoles, roleFields, (items) => { homeRoles = items; });
+      renderListEditor('expertise-editor', homeExpertise, expertiseFields, (items) => { homeExpertise = items; });
+    } catch {}
   }
+
+  document.getElementById('add-role')!.addEventListener('click', () => {
+    homeRoles.push({ date: '', role: '', org: '', desc: '', accent: 'cyan' });
+    renderListEditor('roles-editor', homeRoles, roleFields, (items) => { homeRoles = items; });
+  });
+
+  document.getElementById('add-expertise')!.addEventListener('click', () => {
+    homeExpertise.push({ title: '', desc: '', tags: '', accent: 'cyan' });
+    renderListEditor('expertise-editor', homeExpertise, expertiseFields, (items) => { homeExpertise = items; });
+  });
 
   document.getElementById('save-home')!.addEventListener('click', async () => {
     const statusEl = document.getElementById('home-status')!;
@@ -292,6 +376,11 @@ import '../../styles/admin.css';
           (document.getElementById('edit-aboutP2') as HTMLTextAreaElement).value,
           (document.getElementById('edit-aboutP3') as HTMLTextAreaElement).value,
         ],
+        roles: homeRoles,
+        expertise: homeExpertise.map(e => ({
+          ...e,
+          tags: typeof e.tags === 'string' ? e.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : e.tags,
+        })),
       });
       statusEl.textContent = 'Saved.';
       statusEl.className = 'admin-success';
@@ -300,6 +389,49 @@ import '../../styles/admin.css';
       statusEl.textContent = err.message;
       statusEl.className = 'admin-error';
       statusEl.style.display = 'block';
+    }
+  });
+
+  // ── Projects editor ──
+  let projectsList: any[] = [];
+  const projectFields = [
+    { key: 'name', label: 'Name' },
+    { key: 'url', label: 'URL' },
+    { key: 'description', label: 'Description', type: 'textarea' as const },
+    { key: 'tags', label: 'Tags (comma-separated)' },
+    { key: 'accent', label: 'Accent Color (cyan/magenta/amber/coral)' },
+  ];
+
+  async function loadProjectsEditor() {
+    try {
+      const data = await api.getContent('projects');
+      projectsList = (data.content?.projects || []).map((p: any) => ({
+        ...p,
+        tags: Array.isArray(p.tags) ? p.tags.join(', ') : p.tags || '',
+      }));
+      renderListEditor('projects-editor', projectsList, projectFields, (items) => { projectsList = items; });
+    } catch {}
+  }
+
+  document.getElementById('add-project')!.addEventListener('click', () => {
+    projectsList.push({ name: '', url: '', description: '', tags: '', accent: 'cyan' });
+    renderListEditor('projects-editor', projectsList, projectFields, (items) => { projectsList = items; });
+  });
+
+  document.getElementById('save-projects')!.addEventListener('click', async () => {
+    const statusEl = document.getElementById('projects-status')!;
+    try {
+      await api.putContent('projects', {
+        title: "Things I've built",
+        subtitle: "Independent products I've created outside of my day job, each addressing a problem I wanted solved.",
+        projects: projectsList.map(p => ({
+          ...p,
+          tags: typeof p.tags === 'string' ? p.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : p.tags,
+        })),
+      });
+      statusEl.textContent = 'Saved.'; statusEl.className = 'admin-success'; statusEl.style.display = '';
+    } catch (err: any) {
+      statusEl.textContent = err.message; statusEl.className = 'admin-error'; statusEl.style.display = '';
     }
   });
 
