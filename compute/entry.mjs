@@ -147,13 +147,22 @@ const server = createServer(async (req, res) => {
       return;
     }
 
-    const staticBase = join(__dirname, '..', 'static');
+    // Find static files - check multiple possible locations
+    const candidates = [
+      join(__dirname, '..', 'static'),
+      '/var/static',
+      '/var/task/static',
+      '/var/task/.amplify-hosting/static',
+      join(__dirname, 'pages'),
+    ];
+    let staticBase = candidates.find(d => existsSync(d) && statSync(d).isDirectory()) || candidates[0];
+    console.log(JSON.stringify({ path, staticBase, __dirname }));
+
     const tryPaths = [
       join(staticBase, path, 'index.html'),
       join(staticBase, path + '.html'),
       join(staticBase, path),
     ];
-    console.log(JSON.stringify({ path, staticBase, try0: tryPaths[0], exists0: existsSync(tryPaths[0]) }));
 
     for (const filePath of tryPaths) {
       if (existsSync(filePath) && statSync(filePath).isFile()) {

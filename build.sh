@@ -11,9 +11,10 @@ mkdir -p .amplify-hosting/static .amplify-hosting/compute/default
 # Static assets from Astro build
 cp -r dist/* .amplify-hosting/static/
 
-# Compute function + dependencies
+# Compute function + dependencies + copy of static pages as fallback
 cp compute/entry.mjs .amplify-hosting/compute/default/
 cp -r compute/node_modules .amplify-hosting/compute/default/
+cp -r dist .amplify-hosting/compute/default/pages
 
 # Deploy manifest
 cat > .amplify-hosting/deploy-manifest.json << 'EOF'
