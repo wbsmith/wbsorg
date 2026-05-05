@@ -1,3 +1,4 @@
+import { createServer } from 'node:http';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, ScanCommand } from '@aws-sdk/lib-dynamodb';
 import { readFileSync, existsSync } from 'node:fs';
@@ -6,6 +7,8 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const client = DynamoDBDocumentClient.from(new DynamoDBClient({ region: 'us-west-1' }));
+
+const PORT = process.env.PORT || 3000;
 
 async function findPostBySlug(slug) {
   const result = await client.send(new ScanCommand({
@@ -83,6 +86,10 @@ function renderPost(post) {
     .post-back:hover { color: var(--cyan); }
     .footer { border-top: 1px solid var(--border-subtle); padding: 2rem;
       text-align: center; font-size: 0.875rem; color: var(--text-muted); }
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      .post h1 { font-size: 1.75rem; }
+    }
   </style>
 </head>
 <body>
@@ -120,45 +127,58 @@ function render404() {
 </head><body><div class="c"><h1>404</h1><p>Post not found.</p><p><a href="/writing">Back to writing</a></p></div></body></html>`;
 }
 
-export async function handler(event) {
-  const path = event.rawPath || event.requestContext?.http?.path || '/';
+const server = createServer(async (req, res) => {
+  const url = new URL(req.url, `http://localhost:${PORT}`);
+  const path = url.pathname;
 
-  // Only handle /writing/* routes with a slug
-  const match = path.match(/^\/writing\/([a-z0-9-]+)\/?$/);
-  if (!match) {
-    // Try to serve static file
-    const staticPath = join(__dirname, '..', 'static', path === '/' ? 'index.html' : path.endsWith('/') ? path + 'index.html' : path);
-    const htmlPath = staticPath.endsWith('.html') ? staticPath : staticPath + '/index.html';
+  try {
+    const match = path.match(/^\/writing\/([a-z0-9-]+)\/?$/);
 
-    for (const tryPath of [staticPath, htmlPath]) {
-      if (existsSync(tryPath)) {
-        const content = readFileSync(tryPath, 'utf-8');
-        const ext = tryPath.split('.').pop();
-        const types = { html: 'text/html', css: 'text/css', js: 'application/javascript', svg: 'image/svg+xml', png: 'image/png', ico: 'image/x-icon', jpg: 'image/jpeg' };
-        return {
-          statusCode: 200,
-          headers: { 'Content-Type': types[ext] || 'application/octet-stream' },
-          body: content,
+    if (match) {
+      const slug = match[1];
+      const post = await findPostBySlug(slug);
+      if (post) {
+        res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'public, max-age=300' });
+        res.end(renderPost(post));
+      } else {
+        res.writeHead(404, { 'Content-Type': 'text/html' });
+        res.end(render404());
+      }
+      return;
+    }
+
+    // Try static files
+    const staticBase = join(__dirname, '..', 'static');
+    const tryPaths = [
+      join(staticBase, path),
+      join(staticBase, path, 'index.html'),
+      join(staticBase, path + '.html'),
+    ];
+
+    for (const filePath of tryPaths) {
+      if (existsSync(filePath)) {
+        const ext = filePath.split('.').pop();
+        const types = {
+          html: 'text/html', css: 'text/css', js: 'application/javascript',
+          svg: 'image/svg+xml', png: 'image/png', ico: 'image/x-icon',
+          jpg: 'image/jpeg', jpeg: 'image/jpeg', json: 'application/json',
         };
+        const content = readFileSync(filePath);
+        res.writeHead(200, { 'Content-Type': types[ext] || 'application/octet-stream' });
+        res.end(content);
+        return;
       }
     }
 
-    return { statusCode: 404, headers: { 'Content-Type': 'text/html' }, body: render404() };
+    res.writeHead(404, { 'Content-Type': 'text/html' });
+    res.end(render404());
+  } catch (err) {
+    console.error('Request error:', err);
+    res.writeHead(500, { 'Content-Type': 'text/html' });
+    res.end('<h1>500</h1><p>Internal server error</p>');
   }
+});
 
-  const slug = match[1];
-  const post = await findPostBySlug(slug);
-
-  if (!post) {
-    return { statusCode: 404, headers: { 'Content-Type': 'text/html' }, body: render404() };
-  }
-
-  return {
-    statusCode: 200,
-    headers: {
-      'Content-Type': 'text/html',
-      'Cache-Control': 'public, max-age=300',
-    },
-    body: renderPost(post),
-  };
-}
+server.listen(PORT, () => {
+  console.log(`Compute server listening on port ${PORT}`);
+});
