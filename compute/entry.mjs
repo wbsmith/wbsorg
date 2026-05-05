@@ -147,12 +147,11 @@ const server = createServer(async (req, res) => {
       return;
     }
 
-    // Try static files
     const staticBase = join(__dirname, '..', 'static');
     const tryPaths = [
-      join(staticBase, path),
       join(staticBase, path, 'index.html'),
       join(staticBase, path + '.html'),
+      join(staticBase, path),
     ];
 
     for (const filePath of tryPaths) {
