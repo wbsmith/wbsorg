@@ -13,6 +13,7 @@ import '../../styles/admin.css';
   <title>Admin — W. Bryan Smith</title>
   <link href="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.snow.css" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@15/marked.min.js"></script>
 </head>
 <body>
 
@@ -158,8 +159,14 @@ import '../../styles/admin.css';
           </div>
           <div class="admin-field">
             <label>Body</label>
-            <div id="post-editor-toolbar"></div>
-            <div id="post-editor" style="min-height:300px;background:var(--bg-surface);color:var(--text-primary);border:1px solid var(--border-subtle);border-top:none;border-radius:0 0 var(--radius-sm) var(--radius-sm);"></div>
+            <div style="margin-bottom:var(--space-sm);">
+              <button class="admin-btn admin-btn--small" id="toggle-editor-mode" type="button">Switch to Markdown</button>
+            </div>
+            <div id="quill-wrapper">
+              <div id="post-editor-toolbar"></div>
+              <div id="post-editor" style="min-height:300px;background:var(--bg-surface);color:var(--text-primary);border:1px solid var(--border-subtle);border-top:none;border-radius:0 0 var(--radius-sm) var(--radius-sm);"></div>
+            </div>
+            <textarea id="markdown-editor" style="display:none;min-height:400px;width:100%;background:var(--bg-surface);color:var(--text-primary);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);padding:var(--space-md);font-family:var(--font-mono);font-size:var(--size-sm);line-height:1.7;resize:vertical;"></textarea>
           </div>
           <div class="admin-field">
             <label for="post-status">Status</label>
@@ -686,10 +693,15 @@ import '../../styles/admin.css';
   // ── Blog / Writing ──
   let quillEditor: any = null;
   let editingPostId: string | null = null;
+  let isMarkdownMode = false;
+  let postSourceMarkdown = '';
 
   const postsListView = document.getElementById('posts-list-view')!;
   const postEditorView = document.getElementById('post-editor-view')!;
   const postsList = document.getElementById('posts-list')!;
+  const quillWrapper = document.getElementById('quill-wrapper')!;
+  const markdownEditor = document.getElementById('markdown-editor') as HTMLTextAreaElement;
+  const toggleBtn = document.getElementById('toggle-editor-mode')!;
 
   function initQuill() {
     if (quillEditor) return;
@@ -719,6 +731,35 @@ import '../../styles/admin.css';
         },
       },
     });
+  }
+
+  toggleBtn.addEventListener('click', () => {
+    isMarkdownMode = !isMarkdownMode;
+    if (isMarkdownMode) {
+      quillWrapper.style.display = 'none';
+      markdownEditor.style.display = '';
+      markdownEditor.value = postSourceMarkdown;
+      toggleBtn.textContent = 'Switch to Rich Text';
+    } else {
+      quillWrapper.style.display = '';
+      markdownEditor.style.display = 'none';
+      postSourceMarkdown = markdownEditor.value;
+      const html = (window as any).marked.parse(postSourceMarkdown);
+      quillEditor.root.innerHTML = html;
+      toggleBtn.textContent = 'Switch to Markdown';
+    }
+  });
+
+  function getPostBody(): string {
+    if (isMarkdownMode) {
+      return (window as any).marked.parse(markdownEditor.value);
+    }
+    return quillEditor.root.innerHTML;
+  }
+
+  function getPostMarkdown(): string {
+    if (isMarkdownMode) return markdownEditor.value;
+    return postSourceMarkdown;
   }
 
   async function loadPostsList() {
@@ -753,6 +794,12 @@ import '../../styles/admin.css';
     postEditorView.style.display = 'block';
     const deleteBtn = document.getElementById('delete-post-btn')!;
 
+    // Reset to rich text mode
+    isMarkdownMode = false;
+    quillWrapper.style.display = '';
+    markdownEditor.style.display = 'none';
+    toggleBtn.textContent = 'Switch to Markdown';
+
     if (postId) {
       editingPostId = postId;
       deleteBtn.style.display = '';
@@ -760,6 +807,14 @@ import '../../styles/admin.css';
       (document.getElementById('post-title') as HTMLInputElement).value = post.title || '';
       (document.getElementById('post-excerpt') as HTMLTextAreaElement).value = post.excerpt || '';
       (document.getElementById('post-status') as HTMLSelectElement).value = post.status || 'draft';
+      postSourceMarkdown = post.markdown || '';
+      if (postSourceMarkdown) {
+        isMarkdownMode = true;
+        quillWrapper.style.display = 'none';
+        markdownEditor.style.display = '';
+        markdownEditor.value = postSourceMarkdown;
+        toggleBtn.textContent = 'Switch to Rich Text';
+      }
       quillEditor.root.innerHTML = post.body || '';
     } else {
       editingPostId = null;
@@ -767,7 +822,9 @@ import '../../styles/admin.css';
       (document.getElementById('post-title') as HTMLInputElement).value = '';
       (document.getElementById('post-excerpt') as HTMLTextAreaElement).value = '';
       (document.getElementById('post-status') as HTMLSelectElement).value = 'draft';
+      postSourceMarkdown = '';
       quillEditor.root.innerHTML = '';
+      markdownEditor.value = '';
     }
   }
 
@@ -785,7 +842,8 @@ import '../../styles/admin.css';
     const data = {
       title: (document.getElementById('post-title') as HTMLInputElement).value,
       excerpt: (document.getElementById('post-excerpt') as HTMLTextAreaElement).value,
-      body: quillEditor.root.innerHTML,
+      body: getPostBody(),
+      markdown: getPostMarkdown(),
       status: (document.getElementById('post-status') as HTMLSelectElement).value,
     };
     try {
