@@ -117,7 +117,8 @@ function renderPost(post) {
           {left: '$$', right: '$$', display: true},
           {left: '$', right: '$', display: false}
         ],
-        throwOnError: false
+        throwOnError: false,
+        strict: false
       });
     });
   </script>
