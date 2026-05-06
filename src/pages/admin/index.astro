@@ -744,15 +744,38 @@ import '../../styles/admin.css';
       quillWrapper.style.display = '';
       markdownEditor.style.display = 'none';
       postSourceMarkdown = markdownEditor.value;
-      const html = (window as any).marked.parse(postSourceMarkdown);
-      quillEditor.root.innerHTML = html;
+      quillEditor.root.innerHTML = markdownToHtml(postSourceMarkdown);
       toggleBtn.textContent = 'Switch to Markdown';
     }
   });
 
+  function markdownToHtml(md: string): string {
+    // Protect LaTeX blocks from marked's processing
+    const blocks: string[] = [];
+    // Block math first ($$...$$)
+    let protected_ = md.replace(/\$\$([\s\S]*?)\$\$/g, (_, latex) => {
+      blocks.push(`$$${latex}$$`);
+      return `%%LATEX_BLOCK_${blocks.length - 1}%%`;
+    });
+    // Inline math ($...$)
+    protected_ = protected_.replace(/\$([^\$\n]+?)\$/g, (_, latex) => {
+      blocks.push(`$${latex}$`);
+      return `%%LATEX_BLOCK_${blocks.length - 1}%%`;
+    });
+
+    let html = (window as any).marked.parse(protected_);
+
+    // Restore LaTeX blocks
+    blocks.forEach((latex, i) => {
+      html = html.replace(`%%LATEX_BLOCK_${i}%%`, latex);
+    });
+
+    return html;
+  }
+
   function getPostBody(): string {
     if (isMarkdownMode) {
-      return (window as any).marked.parse(markdownEditor.value);
+      return markdownToHtml(markdownEditor.value);
     }
     return quillEditor.root.innerHTML;
   }
