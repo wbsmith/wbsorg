@@ -69,7 +69,9 @@ function renderPost(post) {
       margin: 2.5rem 0 1rem; }
     .post-body h3 { font-family: var(--font-display); font-size: 1.25rem; color: var(--text-primary);
       margin: 2rem 0 0.75rem; }
-    .post-body img { max-width: 100%; border-radius: 8px; margin: 1.5rem 0; }
+    .post-body img { max-width: 100%; border-radius: 8px; margin: 1.5rem 0; display: block; }
+    .post-body .fig-caption { font-size: 0.9rem; color: #8b8fa4; line-height: 1.5; margin: -0.5rem 0 2rem; padding: 0 0.5rem; }
+    .post-body .katex-display { margin: 2rem 0; text-align: center; overflow-x: auto; }
     .post-body blockquote { border-left: 3px solid var(--cyan); padding-left: 1.5rem;
       margin: 1.5rem 0; color: var(--text-secondary); font-style: italic; }
     .post-body pre { background: var(--bg-surface); padding: 1.5rem; border-radius: 8px;
@@ -119,6 +121,15 @@ function renderPost(post) {
         ],
         throwOnError: false,
         strict: false
+      });
+      document.querySelectorAll('.post-body img').forEach(function(img) {
+        var alt = img.getAttribute('alt');
+        if (alt && alt.length > 10) {
+          var cap = document.createElement('div');
+          cap.className = 'fig-caption';
+          cap.textContent = alt;
+          img.parentNode.insertBefore(cap, img.nextSibling);
+        }
       });
     });
   </script>
