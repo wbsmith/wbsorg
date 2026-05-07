@@ -765,9 +765,9 @@ import '../../styles/admin.css';
 
     let html = (window as any).marked.parse(protected_);
 
-    // Restore LaTeX blocks
+    // Restore LaTeX blocks (use function replacer to avoid $$ special pattern)
     blocks.forEach((latex, i) => {
-      html = html.replace(`%%LATEX_BLOCK_${i}%%`, latex);
+      html = html.replace(`%%LATEX_BLOCK_${i}%%`, () => latex);
     });
 
     return html;
