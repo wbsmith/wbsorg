@@ -754,12 +754,12 @@ import '../../styles/admin.css';
     const blocks: string[] = [];
     // Block math first ($$...$$)
     let protected_ = md.replace(/\$\$([\s\S]*?)\$\$/g, (_, latex) => {
-      blocks.push(`$$${latex}$$`);
+      blocks.push('$$' + latex + '$$');
       return `%%LATEX_BLOCK_${blocks.length - 1}%%`;
     });
     // Inline math ($...$)
     protected_ = protected_.replace(/\$([^\$\n]+?)\$/g, (_, latex) => {
-      blocks.push(`$${latex}$`);
+      blocks.push('$' + latex + '$');
       return `%%LATEX_BLOCK_${blocks.length - 1}%%`;
     });
 
