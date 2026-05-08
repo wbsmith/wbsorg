@@ -226,6 +226,10 @@ import '../../styles/admin.css';
 
     const result = await signIn(email, password);
     if (result.success) {
+      if (window.PasswordCredential) {
+        const cred = new PasswordCredential({ id: email, password: password });
+        navigator.credentials.store(cred).catch(() => {});
+      }
       showView();
     } else if (result.challenge === 'NEW_PASSWORD_REQUIRED') {
       pendingSession = result.session!;
