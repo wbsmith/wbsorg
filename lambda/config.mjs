@@ -5,7 +5,7 @@ export const TABLES = {
   posts: process.env.POSTS_TABLE || 'wbs-posts',
 };
 export const MEDIA_BUCKET = process.env.MEDIA_BUCKET || 'wbs-media-assets';
-export const NOTIFY_EMAIL = process.env.NOTIFY_EMAIL || 'hello@wbryansmith.org';
+export const NOTIFY_EMAIL = process.env.NOTIFY_EMAIL || '"W. Bryan Smith" <hello@wbryansmith.org>';
 
 export const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',

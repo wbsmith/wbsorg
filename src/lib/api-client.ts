@@ -26,6 +26,7 @@ export const api = {
   getMessages: () => request('/api/messages'),
   patchMessage: (id: string, status: string) => request(`/api/messages/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) }),
   deleteMessage: (id: string) => request(`/api/messages/${id}`, { method: 'DELETE' }),
+  replyMessage: (id: string, message: string) => request(`/api/messages/${id}/reply`, { method: 'POST', body: JSON.stringify({ message }) }),
 
   getPresignedUrl: (filename: string, contentType: string, prefix: string) =>
     request('/api/upload/presign', { method: 'POST', body: JSON.stringify({ filename, contentType, prefix }) }),

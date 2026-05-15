@@ -307,9 +307,49 @@
 }
 
 /* Messages table */
-.admin-messages {
-  width: 100%;
-  border-collapse: collapse;
+.admin-msg {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-lg);
+}
+
+.admin-msg--unread {
+  border-left: 3px solid var(--cyan);
+}
+
+.admin-msg__header {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-md);
+}
+
+.admin-msg__body {
+  color: var(--text-secondary);
+  font-size: var(--size-base);
+  line-height: 1.7;
+  white-space: pre-wrap;
+  margin-bottom: var(--space-md);
+}
+
+.admin-msg__reply {
+  border-left: 2px solid var(--cyan-dim);
+  padding-left: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.admin-msg__actions {
+  display: flex;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+}
+
+.admin-msg__reply-form {
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--border-subtle);
 }
 
 /* Quill dark theme overrides */

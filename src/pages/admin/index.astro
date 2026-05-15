@@ -657,20 +657,67 @@ import '../../styles/admin.css';
         container.innerHTML = '<p style="color:var(--text-muted);font-family:var(--font-mono);font-size:var(--size-sm);">No messages yet.</p>';
         return;
       }
-      container.innerHTML = `<table class="admin-messages">
-        <thead><tr><th>Date</th><th>From</th><th>Message</th><th></th></tr></thead>
-        <tbody>${msgs.map((m: any) => `
-          <tr class="${m.status === 'unread' ? 'unread' : ''}" data-msg-id="${m.messageId}">
-            <td>${new Date(m.createdAt).toLocaleDateString()}</td>
-            <td>${m.name}<br/><span style="font-size:var(--size-xs);color:var(--text-muted);">${m.email}</span></td>
-            <td>${m.message.length > 120 ? m.message.slice(0, 120) + '...' : m.message}</td>
-            <td class="admin-messages__actions">
-              <button class="admin-btn admin-btn--small" data-toggle-msg="${m.messageId}" data-msg-status="${m.status}">${m.status === 'unread' ? 'Read' : 'Unread'}</button>
-              <button class="admin-btn admin-btn--small admin-btn--danger" data-delete-msg="${m.messageId}">Del</button>
-            </td>
-          </tr>
-        `).join('')}</tbody>
-      </table>`;
+      container.innerHTML = msgs.map((m: any) => `
+        <div class="admin-msg ${m.status === 'unread' ? 'admin-msg--unread' : ''}" data-msg-id="${m.messageId}">
+          <div class="admin-msg__header">
+            <strong>${m.name}</strong>
+            <span style="color:var(--text-muted);font-size:var(--size-xs);margin-left:var(--space-sm);">${m.email}</span>
+            <span style="color:var(--text-muted);font-size:var(--size-xs);margin-left:auto;">${new Date(m.createdAt).toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric', hour:'numeric', minute:'2-digit' })}</span>
+            <span style="font-family:var(--font-mono);font-size:var(--size-xs);color:var(--text-muted);margin-left:var(--space-sm);">${m.status}</span>
+          </div>
+          <div class="admin-msg__body">${m.message}</div>
+          ${(m.replies || []).map((r: any) => `
+            <div class="admin-msg__reply">
+              <span style="font-family:var(--font-mono);font-size:var(--size-xs);color:var(--cyan);">You replied · ${new Date(r.sentAt).toLocaleDateString()}</span>
+              <div style="margin-top:var(--space-xs);color:var(--text-secondary);font-size:var(--size-sm);white-space:pre-wrap;">${r.body}</div>
+            </div>
+          `).join('')}
+          <div class="admin-msg__actions">
+            <button class="admin-btn admin-btn--small" data-reply-msg="${m.messageId}">Reply</button>
+            <button class="admin-btn admin-btn--small" data-toggle-msg="${m.messageId}" data-msg-status="${m.status}">${m.status === 'unread' ? 'Mark Read' : 'Mark Unread'}</button>
+            <button class="admin-btn admin-btn--small admin-btn--danger" data-delete-msg="${m.messageId}">Delete</button>
+          </div>
+          <div class="admin-msg__reply-form" data-reply-form="${m.messageId}" style="display:none;">
+            <textarea data-reply-text="${m.messageId}" rows="4" placeholder="Type your reply..." style="width:100%;background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);padding:var(--space-sm) var(--space-md);color:var(--text-primary);font-family:var(--font-body);font-size:var(--size-sm);resize:vertical;margin-bottom:var(--space-sm);"></textarea>
+            <button class="admin-btn admin-btn--small" data-send-reply="${m.messageId}">Send</button>
+            <button class="admin-btn admin-btn--small" data-cancel-reply="${m.messageId}">Cancel</button>
+            <span data-reply-status="${m.messageId}" style="font-family:var(--font-mono);font-size:var(--size-xs);margin-left:var(--space-sm);display:none;"></span>
+          </div>
+        </div>
+      `).join('');
+
+      container.querySelectorAll<HTMLButtonElement>('[data-reply-msg]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const form = container.querySelector(`[data-reply-form="${btn.dataset.replyMsg}"]`) as HTMLElement;
+          form.style.display = form.style.display === 'none' ? '' : 'none';
+        });
+      });
+
+      container.querySelectorAll<HTMLButtonElement>('[data-send-reply]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.dataset.sendReply!;
+          const textarea = container.querySelector(`[data-reply-text="${id}"]`) as HTMLTextAreaElement;
+          const status = container.querySelector(`[data-reply-status="${id}"]`) as HTMLElement;
+          if (!textarea.value.trim()) return;
+          btn.disabled = true;
+          try {
+            await api.replyMessage(id, textarea.value);
+            status.textContent = 'Sent!'; status.className = 'admin-success'; status.style.display = '';
+            loadedSections.delete('messages');
+            setTimeout(() => loadMessages(), 1000);
+          } catch (err: any) {
+            status.textContent = err.message; status.className = 'admin-error'; status.style.display = '';
+            btn.disabled = false;
+          }
+        });
+      });
+
+      container.querySelectorAll<HTMLButtonElement>('[data-cancel-reply]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const form = container.querySelector(`[data-reply-form="${btn.dataset.cancelReply}"]`) as HTMLElement;
+          form.style.display = 'none';
+        });
+      });
 
       container.querySelectorAll<HTMLButtonElement>('[data-toggle-msg]').forEach(btn => {
         btn.addEventListener('click', async () => {
